@@ -287,13 +287,18 @@
                 convertValue(upliftLbs, 'LBS', elements.upliftUnit.value)
             );
 
-            elements.totalActualFuel.value = Math.round(remainingFuelLbs + lastActualUpliftLbs);
+            elements.totalActualFuel.value = Math.round((remainingFuelLbs + lastActualUpliftLbs) / 10) * 10;
         }
 
         // Event listeners pre existujúce funkcie
         elements.actualUplift.addEventListener('input', function() {
             updateActualUpliftDisplay();
             updateCalculations();
+        });
+
+        // Pridané event listenery pre Remaining a Required Fuel
+        ['remainingFuel', 'requiredFuel', 'requiredUpliftLbs'].forEach(id => {
+            elements[id].addEventListener('input', updateCalculations);
         });
 
         elements.actualUpliftUnit.addEventListener('change', function() {
