@@ -26,6 +26,7 @@
             margin: 0 auto;
             padding: 10px;
             box-sizing: border-box;
+            overscroll-behavior-y: contain; /* Pre pull-to-refresh */
         }
         .form-group {
             margin-bottom: 15px;
@@ -95,9 +96,40 @@
                 flex: 1;
             }
         }
+        .clear-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            cursor: pointer;
+        }
+        /* Štýly pre pull-to-refresh */
+        .pull-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            transform: translateY(-100%);
+            transition: transform 0.2s;
+        }
     </style>
 </head>
 <body>
+    <div class="pull-indicator">Potiahnite nadol pre vymazanie</div>
     <h1>Jet A-1 Uplift Calculator</h1>
     <div id="calculator">
         <div class="form-group">
@@ -160,8 +192,9 @@
         </div>
     </div>
 
+    <button class="clear-button" id="clearButton">CLR</button>
+
     <script>
-    // Počkáme na načítanie celého dokumentu
     window.onload = function() {
         const elements = {
             remainingFuel: document.getElementById('remainingFuel'),
@@ -177,6 +210,20 @@
         };
 
         let lastActualUpliftLbs = 0;
+
+        // Funkcia na vymazanie formulára
+        function clearForm() {
+            elements.remainingFuel.value = '';
+            elements.requiredFuel.value = '';
+            elements.fuelDensity.value = '0.7900';
+            elements.fuelTemperature.value = '15';
+            elements.requiredUpliftLbs.value = '';
+            elements.requiredUpliftConverted.value = '';
+            elements.actualUplift.value = '';
+            elements.totalActualFuel.value = '';
+            lastActualUpliftLbs = 0;
+            updateCalculations();
+        }
 
         function calculateDensity(temperature) {
             return 0.79 + (15 - temperature) * 0.0007;
@@ -243,7 +290,7 @@
             elements.totalActualFuel.value = Math.round(remainingFuelLbs + lastActualUpliftLbs);
         }
 
-        // Event listeners
+        // Event listeners pre existujúce funkcie
         elements.actualUplift.addEventListener('input', function() {
             updateActualUpliftDisplay();
             updateCalculations();
@@ -289,18 +336,35 @@
             updateCalculations();
         });
 
-        ['remainingFuel', 'requiredFuel', 'requiredUpliftLbs'].forEach(id => {
-            if (elements[id]) {
-                elements[id].addEventListener('input', function() {
-                    if (id === 'requiredUpliftLbs' && 
-                        elements.remainingFuel.value === '' && 
-                        elements.requiredFuel.value === '') {
-                        elements.fuelDensity.value = '0.7900';
-                    }
-                    updateCalculations();
-                });
+        // Event listeners pre clear button a pull-to-refresh
+        document.getElementById('clearButton').addEventListener('click', clearForm);
+
+        let touchStartY = 0;
+        let pullIndicator = document.querySelector('.pull-indicator');
+        
+        document.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', function(e) {
+            const touchY = e.touches[0].clientY;
+            const pull = touchY - touchStartY;
+            
+            if (window.scrollY === 0 && pull > 0) {
+                pullIndicator.style.transform = `translateY(${Math.min(pull / 2, 50)}px)`;
+                e.preventDefault();
             }
-        });
+        }, { passive: false });
+
+        document.addEventListener('touchend', function(e) {
+            const pull = e.changedTouches[0].clientY - touchStartY;
+            
+            if (pull > 100) {
+                clearForm();
+            }
+            
+            pullIndicator.style.transform = 'translateY(-100%)';
+        }, { passive: true });
 
         // Inicializácia
         elements.requiredUpliftLbs.value = '';
