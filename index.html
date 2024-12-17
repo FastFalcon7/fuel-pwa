@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jet A-1 Uplift Calculator</title>
+
+    <!-- iOS meta tagy -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="fuel PWA">
+
+    <!-- iOS ikony -->
+    <link rel="apple-touch-icon" href="/fuel-pwa/assets/icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/fuel-pwa/assets/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/fuel-pwa/assets/icon-167x167.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/fuel-pwa/assets/icon-180x180.png">
+  
+    <link rel="manifest" href="/fuel-pwa/manifest.json">
+    <!-- <link rel="stylesheet" href="/fuel-pwa/css/styles.css">-->
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .input-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 5px;
+        }
+        input, select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        input {
+            flex: 1;
+            min-width: 0;
+        }
+        select {
+            width: auto;
+            min-width: 80px;
+        }
+        .unit {
+            color: #0066cc;
+            min-width: 45px;
+            margin-right: 5px;
+        }
+        #requiredUpliftGroup {
+            background-color: #ffe4d1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        #requiredUpliftGroup .input-container {
+            margin-top: 5px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto;
+            gap: 5px;
+            align-items: center;
+        }
+        h1 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        @media (min-width: 600px) {
+            body {
+                padding: 20px;
+                max-width: 600px;
+            }
+            .form-group {
+                flex-direction: row;
+                align-items: center;
+            }
+            label {
+                flex: 0 0 200px;
+                margin-bottom: 0;
+            }
+            .input-container {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Jet A-1 Uplift Calculator</h1>
+    <div id="calculator">
+        <div class="form-group">
+            <label for="remainingFuel">Remaining Fuel:</label>
+            <div class="input-container">
+                <input type="number" id="remainingFuel">
+                <span class="unit">lbs</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="requiredFuel">Required Fuel:</label>
+            <div class="input-container">
+                <input type="number" id="requiredFuel">
+                <span class="unit">lbs</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="fuelDensity">Fuel Density:</label>
+            <div class="input-container">
+                <input type="number" id="fuelDensity" value="0.7900" step="0.0001">
+                <span class="unit">kg/l</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="fuelTemperature">Fuel Temperature:</label>
+            <div class="input-container">
+                <input type="number" id="fuelTemperature">
+                <span class="unit">°C</span>
+            </div>
+        </div>
+        <div id="requiredUpliftGroup">
+            <label for="requiredUpliftLbs">Required Uplift:</label>
+            <div class="input-container">
+                <input type="number" id="requiredUpliftLbs">
+                <span class="unit">lbs</span>
+                <input type="number" id="requiredUpliftConverted" readonly>
+                <select id="upliftUnit">
+                    <option value="L">Liters</option>
+                    <option value="USG">US Gallons</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="actualUplift">Actual Uplift:</label>
+            <div class="input-container">
+                <input type="number" id="actualUplift">
+                <select id="actualUpliftUnit">
+                    <option value="L">Liters</option>
+                    <option value="USG">US Gallons</option>
+                    <option value="LBS">LBS</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="totalActualFuel">Total Actual Fuel:</label>
+            <div class="input-container">
+                <input type="number" id="totalActualFuel" readonly>
+                <span class="unit">lbs</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Počkáme na načítanie celého dokumentu
+    window.onload = function() {
+        const elements = {
+            remainingFuel: document.getElementById('remainingFuel'),
+            requiredFuel: document.getElementById('requiredFuel'),
+            fuelDensity: document.getElementById('fuelDensity'),
+            fuelTemperature: document.getElementById('fuelTemperature'),
+            requiredUpliftLbs: document.getElementById('requiredUpliftLbs'),
+            requiredUpliftConverted: document.getElementById('requiredUpliftConverted'),
+            upliftUnit: document.getElementById('upliftUnit'),
+            actualUplift: document.getElementById('actualUplift'),
+            actualUpliftUnit: document.getElementById('actualUpliftUnit'),
+            totalActualFuel: document.getElementById('totalActualFuel')
+        };
+
+        let lastActualUpliftLbs = 0;
+
+        function calculateDensity(temperature) {
+            return 0.79 + (15 - temperature) * 0.0007;
+        }
+
+        function calculateTemperature(density) {
+            return 15 + ((0.79 - density) / 0.0007);
+        }
+
+        function convertToLiters(value, fromUnit) {
+            if (fromUnit === 'USG') return value * 3.78541;
+            if (fromUnit === 'LBS') {
+                const density = parseFloat(elements.fuelDensity.value) || 0.79;
+                return value / (density * 2.20462);
+            }
+            return value;
+        }
+
+        function convertFromLiters(liters, toUnit) {
+            if (toUnit === 'USG') return liters / 3.78541;
+            if (toUnit === 'LBS') {
+                const density = parseFloat(elements.fuelDensity.value) || 0.79;
+                return liters * density * 2.20462;
+            }
+            return liters;
+        }
+
+        function convertValue(value, fromUnit, toUnit) {
+            if (fromUnit === toUnit) return value;
+            const liters = convertToLiters(value, fromUnit);
+            return convertFromLiters(liters, toUnit);
+        }
+
+        function updateActualUpliftDisplay() {
+            const currentUnit = elements.actualUpliftUnit.value;
+            const currentValue = parseFloat(elements.actualUplift.value) || 0;
+            const currentValueInLbs = convertValue(currentValue, currentUnit, 'LBS');
+            lastActualUpliftLbs = currentValueInLbs;
+        }
+
+        function convertActualUpliftToNewUnit(newUnit) {
+            if (!elements.actualUplift.value) return;
+            const newValue = convertValue(lastActualUpliftLbs, 'LBS', newUnit);
+            elements.actualUplift.value = Math.round(newValue);
+        }
+
+        function updateCalculations() {
+            const density = parseFloat(elements.fuelDensity.value) || 0.79;
+            const remainingFuelLbs = parseFloat(elements.remainingFuel.value) || 0;
+            const requiredFuelLbs = parseFloat(elements.requiredFuel.value) || 0;
+            let upliftLbs = parseFloat(elements.requiredUpliftLbs.value) || 0;
+
+            if (remainingFuelLbs && requiredFuelLbs) {
+                upliftLbs = requiredFuelLbs - remainingFuelLbs;
+                elements.requiredUpliftLbs.value = Math.round(upliftLbs);
+            } else if (upliftLbs) {
+                elements.requiredFuel.value = Math.round(remainingFuelLbs + upliftLbs);
+            }
+
+            elements.requiredUpliftConverted.value = Math.round(
+                convertValue(upliftLbs, 'LBS', elements.upliftUnit.value)
+            );
+
+            elements.totalActualFuel.value = Math.round(remainingFuelLbs + lastActualUpliftLbs);
+        }
+
+        // Event listeners
+        elements.actualUplift.addEventListener('input', function() {
+            updateActualUpliftDisplay();
+            updateCalculations();
+        });
+
+        elements.actualUpliftUnit.addEventListener('change', function() {
+            convertActualUpliftToNewUnit(this.value);
+            updateCalculations();
+        });
+
+        elements.upliftUnit.addEventListener('change', function() {
+            const selectedUnit = this.value;
+            if (selectedUnit === 'USG') {
+                if (elements.actualUpliftUnit.value !== 'LBS') {
+                    elements.actualUpliftUnit.value = 'USG';
+                    convertActualUpliftToNewUnit('USG');
+                }
+            }
+            updateCalculations();
+        });
+
+        elements.fuelDensity.addEventListener('input', function() {
+            const density = parseFloat(this.value);
+            if (!isNaN(density)) {
+                elements.fuelTemperature.value = Math.round(calculateTemperature(density));
+            }
+            if (elements.actualUplift.value) {
+                updateActualUpliftDisplay();
+                convertActualUpliftToNewUnit(elements.actualUpliftUnit.value);
+            }
+            updateCalculations();
+        });
+
+        elements.fuelTemperature.addEventListener('input', function() {
+            const temperature = parseFloat(this.value);
+            if (!isNaN(temperature)) {
+                elements.fuelDensity.value = calculateDensity(temperature).toFixed(4);
+            }
+            if (elements.actualUplift.value) {
+                updateActualUpliftDisplay();
+                convertActualUpliftToNewUnit(elements.actualUpliftUnit.value);
+            }
+            updateCalculations();
+        });
+
+        ['remainingFuel', 'requiredFuel', 'requiredUpliftLbs'].forEach(id => {
+            if (elements[id]) {
+                elements[id].addEventListener('input', function() {
+                    if (id === 'requiredUpliftLbs' && 
+                        elements.remainingFuel.value === '' && 
+                        elements.requiredFuel.value === '') {
+                        elements.fuelDensity.value = '0.7900';
+                    }
+                    updateCalculations();
+                });
+            }
+        });
+
+        // Inicializácia
+        elements.requiredUpliftLbs.value = '';
+        elements.requiredUpliftConverted.value = '';
+        elements.fuelTemperature.value = '15';
+        elements.fuelDensity.value = '0.7900';
+        updateCalculations();
+    };
+    </script>
+</body>
+</html>
