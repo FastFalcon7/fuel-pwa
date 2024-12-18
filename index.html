@@ -129,7 +129,7 @@
     </style>
 </head>
 <body>
-    <div class="pull-indicator">Potiahnite nadol pre vymazanie</div>
+    <div class="pull-indicator">Pull to refresh</div>
     <h1>Jet A-1 Uplift Calculator</h1>
     <div id="calculator">
         <div class="form-group">
@@ -364,7 +364,7 @@
         document.addEventListener('touchend', function(e) {
             const pull = e.changedTouches[0].clientY - touchStartY;
             
-            if (pull > 100) {
+            if (pull > 200) {
                 clearForm();
             }
             
