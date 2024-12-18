@@ -71,13 +71,33 @@
         #requiredUpliftGroup .input-container {
             margin-top: 5px;
             display: grid;
-            grid-template-columns: minmax(80px, 1fr) auto minmax(80px, 1fr) auto;
+            grid-template-columns: 1fr 40px 1fr 85px;
             gap: 5px;
             align-items: center;
         }
         #requiredUpliftGroup input {
             width: 100%;
             min-width: 0;
+            text-align: right;
+        }
+        .unit {
+            color: #0066cc;
+            min-width: 30px;
+            text-align: right;
+            margin-right: 0;
+        }
+        select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            width: 85px;
+        }
+/* Pre Actual Uplift riadok */
+        .input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         h1 {
             font-size: 1.5em;
@@ -172,7 +192,7 @@
                 <input type="number" id="requiredUpliftConverted" readonly>
                 <select id="upliftUnit">
                     <option value="L">Liters</option>
-                    <option value="USG">US Gallons</option>
+                    <option value="USG">US Gal</option>
                 </select>
             </div>
         </div>
@@ -182,7 +202,7 @@
                 <input type="number" id="actualUplift">
                 <select id="actualUpliftUnit">
                     <option value="L">Liters</option>
-                    <option value="USG">US Gallons</option>
+                    <option value="USG">US Gal</option>
                     <option value="LBS">LBS</option>
                 </select>
             </div>
