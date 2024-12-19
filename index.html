@@ -71,6 +71,14 @@
         #requiredUpliftGroup .input-container {
             margin-top: 5px;
             display: grid;
+            grid-template-columns: 1fr auto 1fr auto;
+            gap: 5px;
+            align-items: center;
+        }
+        /*
+        #requiredUpliftGroup .input-container {
+            margin-top: 5px;
+            display: grid;
             grid-template-columns: 0.8fr 40px 0.8fr 20px 85px;
             column-gap: 10px 20px;
             gap: 10px;
@@ -99,7 +107,7 @@
             align-items: center;
             gap: 10px;
         }
-        
+        */
         h1 {
             font-size: 1.5em;
             margin-bottom: 20px;
@@ -193,7 +201,7 @@
                 <input type="number" id="requiredUpliftConverted" readonly>
                 <select id="upliftUnit">
                     <option value="L">Liters</option>
-                    <option value="USG">US Gal</option>
+                    <option value="USG">USGal</option>
                 </select>
             </div>
         </div>
@@ -203,7 +211,7 @@
                 <input type="number" id="actualUplift">
                 <select id="actualUpliftUnit">
                     <option value="L">Liters</option>
-                    <option value="USG">US Gal</option>
+                    <option value="USG">USGal</option>
                     <option value="LBS">LBS</option>
                 </select>
             </div>
