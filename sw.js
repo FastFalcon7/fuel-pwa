@@ -1,9 +1,8 @@
 const CACHE_NAME = 'fuel-pwa-v1';
+const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v1';
 const CACHE_FILES = [
   '/fuel-pwa/',
   '/fuel-pwa/index.html',
-//  '/fuel-pwa/css/styles.css',
-//  '/fuel-pwa/js/script.js',
   '/fuel-pwa/manifest.json',
   '/fuel-pwa/assets/icon-48x48.png',
   '/fuel-pwa/assets/icon-72x72.png',
@@ -24,24 +23,31 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Cache otvorená');
+        console.log('Statická cache vytvorená');
         return cache.addAll(CACHE_FILES);
       })
+      .then(() => self.skipWaiting()) // Zabezpečí okamžitú aktiváciu
   );
 });
 
 // Aktivácia Service Workera
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      // Vyčistenie starých cache
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME && cacheName !== DYNAMIC_CACHE) {
+              console.log('Vymazávanie starej cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Prevzatie kontroly nad všetkými tabmi
+      self.clients.claim()
+    ])
   );
 });
 
@@ -49,30 +55,70 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
-      .then((response) => {
-        // Cache hit - vrátime response z cache
-        if (response) {
-          return response;
+      .then((cachedResponse) => {
+        // Najprv skúsime získať z cache
+        if (cachedResponse) {
+          // Ak sme online, aktualizujeme cache na pozadí
+          if (navigator.onLine) {
+            fetch(event.request)
+              .then((response) => {
+                if (response.ok) {
+                  updateCache(event.request, response.clone());
+                }
+              })
+              .catch(() => console.log('Nepodarilo sa aktualizovať cache'));
+          }
+          return cachedResponse;
         }
 
-        // Inak skúsime fetchnúť požiadavku zo siete
+        // Ak nie je v cache, skúsime zo siete
         return fetch(event.request)
           .then((response) => {
-            // Kontrola či máme validnú response
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
 
-            // Klonujeme response, pretože cache a browser ju potrebujú
+            // Uložíme do dynamickej cache
             const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
+            caches.open(DYNAMIC_CACHE)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
               });
 
             return response;
+          })
+          .catch((error) => {
+            console.log('Fetch zlyhal:', error);
+            // Tu môžete pridať fallback pre offline obsah
           });
       })
   );
 });
+
+// Periodické overenie spojenia a aktualizácia cache
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'update-cache') {
+    event.waitUntil(updateAllCache());
+  }
+});
+
+// Funkcia na aktualizáciu cache
+async function updateCache(request, response) {
+  const cache = await caches.open(CACHE_NAME);
+  return cache.put(request, response);
+}
+
+// Funkcia na aktualizáciu všetkej cache
+async function updateAllCache() {
+  const cache = await caches.open(CACHE_NAME);
+  for (const url of CACHE_FILES) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        await cache.put(url, response);
+      }
+    } catch (error) {
+      console.log('Nepodarilo sa aktualizovať:', url);
+    }
+  }
+}
