@@ -183,7 +183,7 @@
             <label for="fuelDensity">Fuel Density:</label>
             <div class="input-container">
                 <input type="number" id="fuelDensity" value="0.7900" step="0.0001">
-                <span class="unit">Kg/L</span>
+                <span class="unit">KG/L</span>
             </div>
         </div>
         <div class="form-group">
@@ -410,6 +410,44 @@
         elements.fuelTemperature.value = '15';
         elements.fuelDensity.value = '0.7900';
         updateCalculations();
+
+        // Registrácia Service Workera
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/fuel-pwa/sw.js', {
+                        scope: '/fuel-pwa/'
+                    });
+                    console.log('Service Worker registrovaný');
+
+            // Pravidelná kontrola aktualizácií
+                    setInterval(() => {
+                        registration.update();
+                    }, 1000 * 60 * 60); // každú hodinu
+            
+                } catch (error) {
+                    console.error('Service Worker registrácia zlyhala:', error);
+                }
+            });
+
+            // Sledovanie životného cyklu aplikácie
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    localStorage.setItem('lastBackgroundTime', Date.now());
+                } else if (document.visibilityState === 'visible') {
+                    const lastBackgroundTime = parseInt(localStorage.getItem('lastBackgroundTime') || '0');
+                    const timeInBackground = Date.now() - lastBackgroundTime;
+            
+                    if (timeInBackground > 1000 * 60 * 60) { // hodina
+                        if (navigator.serviceWorker.controller) {
+                            navigator.serviceWorker.controller.postMessage({
+                                type: 'UPDATE_CACHE'
+                            });
+                        }
+                    }
+                }
+            });
+        }
     };
     </script>
 </body>
