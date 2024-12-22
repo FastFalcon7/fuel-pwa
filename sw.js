@@ -1,5 +1,7 @@
-const CACHE_NAME = 'fuel-pwa-v1';
-const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v1';
+const CACHE_NAME = 'fuel-pwa-v3';
+const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v3';
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 dní v milisekundách
+
 const CACHE_FILES = [
     '/fuel-pwa/',
     '/fuel-pwa/index.html',
@@ -18,15 +20,31 @@ const CACHE_FILES = [
     '/fuel-pwa/assets/icon-512x512.png'
 ];
 
+// Pomocná funkcia na kontrolu platnosti cache
+async function isCacheValid(cacheName) {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    if (keys.length === 0) return false;
+
+    const cacheTimestamp = await cache.match('cache-timestamp');
+    if (!cacheTimestamp) return false;
+
+    const timestamp = await cacheTimestamp.text();
+    return Date.now() - parseInt(timestamp) < CACHE_DURATION;
+}
+
 // Inštalácia Service Workera
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('Cache vytvorená');
+        Promise.all([
+            caches.open(CACHE_NAME).then(async (cache) => {
+                console.log('Vytváram novú cache');
+                // Pridanie časovej známky do cache
+                await cache.put('cache-timestamp', new Response(Date.now().toString()));
                 return cache.addAll(CACHE_FILES);
-            })
-            .then(() => self.skipWaiting()) // Zabezpečí okamžitú aktiváciu
+            }),
+            self.skipWaiting()
+        ])
     );
 });
 
@@ -39,84 +57,103 @@ self.addEventListener('activate', (event) => {
                 return Promise.all(
                     cacheNames.map((cacheName) => {
                         if (cacheName !== CACHE_NAME && cacheName !== DYNAMIC_CACHE) {
-                            console.log('Vymazávanie starej cache:', cacheName);
+                            console.log('Mažem starú cache:', cacheName);
                             return caches.delete(cacheName);
                         }
                     })
                 );
             }),
-            // Prevzatie kontroly nad všetkými tabmi
             self.clients.claim()
         ])
     );
 });
 
-// Zachytávanie požiadaviek
+// Zachytávanie požiadaviek - Cache First stratégia s kontrolou platnosti
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request)
-            .then((cachedResponse) => {
-                // Najprv vrátime odpoveď z cache ak existuje
-                if (cachedResponse) {
-                    // Na pozadí skúsime aktualizovať cache ak sme online
-                    if (navigator.onLine) {
-                        fetch(event.request)
-                            .then((networkResponse) => {
-                                if (networkResponse && networkResponse.status === 200) {
-                                    caches.open(CACHE_NAME)
-                                        .then((cache) => {
-                                            cache.put(event.request, networkResponse.clone());
-                                        });
-                                }
-                            })
-                            .catch(() => console.log('Cache update failed'));
-                    }
-                    return cachedResponse;
+        (async () => {
+            // Kontrola platnosti cache
+            const isCacheStillValid = await isCacheValid(CACHE_NAME);
+            if (!isCacheStillValid) {
+                // Ak cache vypršala, pokús sa o network request
+                try {
+                    const networkResponse = await fetch(event.request);
+                    const cache = await caches.open(CACHE_NAME);
+                    await cache.put(event.request, networkResponse.clone());
+                    await cache.put('cache-timestamp', new Response(Date.now().toString()));
+                    return networkResponse;
+                } catch (error) {
+                    // Ak network request zlyhá, skús použiť expired cache ako fallback
+                    const cachedResponse = await caches.match(event.request);
+                    if (cachedResponse) return cachedResponse;
+                }
+            }
+
+            // Štandardná Cache First logika
+            const cachedResponse = await caches.match(event.request);
+            if (cachedResponse) {
+                // Background refresh
+                event.waitUntil(
+                    fetch(event.request)
+                        .then((networkResponse) => {
+                            if (networkResponse && networkResponse.status === 200) {
+                                return caches.open(CACHE_NAME)
+                                    .then((cache) => {
+                                        cache.put(event.request, networkResponse);
+                                        console.log('Cache updated for:', event.request.url);
+                                    });
+                            }
+                        })
+                        .catch(() => {
+                            console.log('Background refresh failed for:', event.request.url);
+                        })
+                );
+                return cachedResponse;
+            }
+
+            // Network request s cachovaním
+            try {
+                const networkResponse = await fetch(event.request);
+                if (!networkResponse || networkResponse.status !== 200) {
+                    return networkResponse;
                 }
 
-                // Ak nie je v cache, ideme na sieť
-                return fetch(event.request)
-                    .then((networkResponse) => {
-                        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                            return networkResponse;
-                        }
-
-                        // Uložíme do cache
-                        const responseToCache = networkResponse.clone();
-                        caches.open(CACHE_NAME)
-                            .then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-
-                        return networkResponse;
-                    })
-                    .catch((error) => {
-                        console.log('Fetch failed:', error);
-                        // Tu môžete pridať fallback pre offline obsah
-                        return new Response('Offline content');
-                    });
-            })
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(event.request, networkResponse.clone());
+                return networkResponse;
+            } catch (error) {
+                console.log('Network fetch failed:', error);
+                return new Response(
+                    'Aplikácia je offline. Prosím, skontrolujte pripojenie.',
+                    { status: 503, statusText: 'Service Unavailable' }
+                );
+            }
+        })()
     );
 });
 
-// Prijímanie správ
+// Spracovanie správ
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'UPDATE_CACHE') {
         event.waitUntil(
-            caches.open(CACHE_NAME)
-                .then((cache) => {
-                    return Promise.all(
-                        CACHE_FILES.map(url => 
-                            fetch(url)
-                                .then(response => {
-                                    if (response.ok) {
-                                        return cache.put(url, response);
-                                    }
-                                })
-                                .catch(error => console.log('Failed to update:', url, error))
-                        )
-                    );
-                })
+            Promise.all([
+                caches.open(CACHE_NAME).then(cache => 
+                    cache.put('cache-timestamp', new Response(Date.now().toString()))
+                ),
+                ...CACHE_FILES.map(url => 
+                    fetch(url)
+                        .then(response => {
+                            if (response.ok) {
+                                return caches.open(CACHE_NAME)
+                                    .then(cache => cache.put(url, response));
+                            }
+                            throw new Error('Response not ok');
+                        })
+                        .catch(error => {
+                            console.error('Cache update failed for:', url, error);
+                        })
+                )
+            ])
         );
     }
 });

@@ -200,7 +200,7 @@
                 <span class="unit">lbs</span>
                 <input type="number" id="requiredUpliftConverted" readonly>
                 <select id="upliftUnit">
-                    <option value="L">Liters</option>
+                    <option value="L">litrs</option>
                     <option value="USG">USGal</option>
                 </select>
             </div>
@@ -257,6 +257,19 @@
             lastActualUpliftLbs = 0;
             updateCalculations();
         }
+        // Offline event listenery
+        window.addEventListener('offline', function() {
+            console.log('Aplikácia je offline');
+        });
+
+        window.addEventListener('online', function() {
+            console.log('Aplikácia je online');
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'UPDATE_CACHE'
+                });
+            }
+        });
 
         function calculateDensity(temperature) {
             return 0.79 + (15 - temperature) * 0.0007;
@@ -420,29 +433,39 @@
                     });
                     console.log('Service Worker registrovaný');
 
-            // Pravidelná kontrola aktualizácií
-                    setInterval(() => {
-                        registration.update();
-                    }, 1000 * 60 * 60); // každú hodinu
-            
+                    // Kontrola aktualizácií pri štarte
+                    const checkForUpdates = async () => {
+                        try {
+                            await registration.update();
+                            console.log('Service Worker aktualizovaný');
+                        } catch (error) {
+                            console.error('Chyba pri aktualizácii Service Workera:', error);
+                        }
+                    };
+
+                    // Kontrola aktualizácií každú hodinu
+                    setInterval(checkForUpdates, 1000 * 60 * 60);
+
+                    // Kontrola pri obnovení pripojenia
+                    window.addEventListener('online', checkForUpdates);
+
                 } catch (error) {
                     console.error('Service Worker registrácia zlyhala:', error);
                 }
             });
 
-            // Sledovanie životného cyklu aplikácie
+            // Vylepšené sledovanie životného cyklu aplikácie
+            let lastUpdateCheck = Date.now();
+
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'hidden') {
-                    localStorage.setItem('lastBackgroundTime', Date.now());
-                } else if (document.visibilityState === 'visible') {
-                    const lastBackgroundTime = parseInt(localStorage.getItem('lastBackgroundTime') || '0');
-                    const timeInBackground = Date.now() - lastBackgroundTime;
-            
-                    if (timeInBackground > 1000 * 60 * 60) { // hodina
+                if (document.visibilityState === 'visible') {
+                    const timeSinceLastUpdate = Date.now() - lastUpdateCheck;
+                    if (timeSinceLastUpdate > 1000 * 60 * 60) { // hodina
                         if (navigator.serviceWorker.controller) {
                             navigator.serviceWorker.controller.postMessage({
                                 type: 'UPDATE_CACHE'
                             });
+                            lastUpdateCheck = Date.now();
                         }
                     }
                 }
