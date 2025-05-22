@@ -31,14 +31,14 @@
         
         .container {
             display: flex;
-            width: 200%;
+            width: 200vw;
             transition: transform 0.3s ease;
         }
         
         .page {
-            width: 50%;
+            width: 100vw;
             flex-shrink: 0;
-            padding-right: 10px;
+            padding: 0 10px;
             box-sizing: border-box;
         }
         
@@ -356,13 +356,13 @@
                 if (diffX > 0 && currentPage === 0) {
                     // Swipe left - na druhú stránku
                     currentPage = 1;
-                    container.style.transform = 'translateX(-50%)';
+                    container.style.transform = 'translateX(-100vw)';
                     dot1.classList.remove('active');
                     dot2.classList.add('active');
                 } else if (diffX < 0 && currentPage === 1) {
                     // Swipe right - na prvú stránku
                     currentPage = 0;
-                    container.style.transform = 'translateX(0%)';
+                    container.style.transform = 'translateX(0)';
                     dot2.classList.remove('active');
                     dot1.classList.add('active');
                 }
