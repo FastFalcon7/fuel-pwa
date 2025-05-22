@@ -17,6 +17,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/fuel-pwa/assets/icon-180x180.png">
   
     <link rel="manifest" href="/fuel-pwa/manifest.json">
+    <!-- <link rel="stylesheet" href="/fuel-pwa/css/styles.css">-->
     
     <style>
         body {
@@ -25,23 +26,8 @@
             margin: 0 auto;
             padding: 10px;
             box-sizing: border-box;
-            overscroll-behavior-y: contain;
-            overflow-x: hidden;
+            overscroll-behavior-y: contain; /* Pre pull-to-refresh */
         }
-        
-        .container {
-            display: flex;
-            width: 200%;
-            transition: transform 0.3s ease;
-        }
-        
-        .page {
-            width: 50%;
-            flex-shrink: 0;
-            padding-right: 10px;
-            box-sizing: border-box;
-        }
-        
         .form-group {
             margin-bottom: 15px;
             display: flex;
@@ -89,15 +75,39 @@
             gap: 5px;
             align-items: center;
         }
-        
-        /* Štýly pre novú stránku */
-        #requiredFuelGroup90 {
-            background-color: #e4f1ff;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
+        /*
+        #requiredUpliftGroup .input-container {
+            margin-top: 5px;
+            display: grid;
+            grid-template-columns: 0.8fr 40px 0.8fr 20px 85px;
+            column-gap: 10px 20px;
+            gap: 10px;
+            align-items: center;
         }
-        
+        #requiredUpliftGroup input {
+            width: 100%;
+            min-width: 0;
+            text-align: right;
+        }
+        .unit {
+            color: #0066cc;
+            min-width: 30px;
+            text-align: right;
+            margin-right: 0;
+        }
+        select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            width: 85px;
+        }
+        .input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        */
         h1 {
             font-size: 1.5em;
             margin-bottom: 20px;
@@ -105,10 +115,7 @@
         @media (min-width: 600px) {
             body {
                 padding: 20px;
-            }
-            .page {
                 max-width: 600px;
-                margin: 0 auto;
             }
             .form-group {
                 flex-direction: row;
@@ -138,28 +145,6 @@
             z-index: 1000;
             cursor: pointer;
         }
-        
-        /* Page indicator */
-        .page-indicator {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 8px;
-            z-index: 1000;
-        }
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #ccc;
-            transition: background-color 0.3s;
-        }
-        .dot.active {
-            background-color: #0066cc;
-        }
-        
         /* Štýly pre pull-to-refresh */
         .pull-indicator {
             position: fixed;
@@ -178,113 +163,66 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    
-    <div class="container" id="container">
-        <!-- Prvá stránka - pôvodný calculator -->
-        <div class="page" id="page1">
-            <h1>Jet A-1 Uplift Calculator</h1>
-            <div id="calculator">
-                <div class="form-group">
-                    <label for="remainingFuel">Remaining Fuel:</label>
-                    <div class="input-container">
-                        <input type="number" id="remainingFuel">
-                        <span class="unit">lbs</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="requiredFuel">Required Fuel:</label>
-                    <div class="input-container">
-                        <input type="number" id="requiredFuel">
-                        <span class="unit">lbs</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="fuelDensity">Fuel Density:</label>
-                    <div class="input-container">
-                        <input type="number" id="fuelDensity" value="0.7900" step="0.0001">
-                        <span class="unit">kg/L</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="fuelTemperature">Fuel Temperature:</label>
-                    <div class="input-container">
-                        <input type="number" id="fuelTemperature">
-                        <span class="unit">°C</span>
-                    </div>
-                </div>
-                <div id="requiredUpliftGroup">
-                    <label for="requiredUpliftLbs">Required Uplift:</label>
-                    <div class="input-container">
-                        <input type="number" id="requiredUpliftLbs">
-                        <span class="unit">lbs</span>
-                        <input type="number" id="requiredUpliftConverted" readonly>
-                        <select id="upliftUnit">
-                            <option value="L">litrs</option>
-                            <option value="USG">USGal</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="actualUplift">Actual Uplift:</label>
-                    <div class="input-container">
-                        <input type="number" id="actualUplift">
-                        <select id="actualUpliftUnit">
-                            <option value="L">Liters</option>
-                            <option value="USG">USGal</option>
-                            <option value="LBS">LBS</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="totalActualFuel">Total Actual Fuel:</label>
-                    <div class="input-container">
-                        <input type="number" id="totalActualFuel" readonly>
-                        <span class="unit">lbs</span>
-                    </div>
-                </div>
+    <h1>Jet A-1 Uplift Calculator</h1>
+    <div id="calculator">
+        <div class="form-group">
+            <label for="remainingFuel">Remaining Fuel:</label>
+            <div class="input-container">
+                <input type="number" id="remainingFuel">
+                <span class="unit">lbs</span>
             </div>
         </div>
-
-        <!-- Druhá stránka - 90% calculator -->
-        <div class="page" id="page2">
-            <h1>90% Uplift Calculator</h1>
-            <div id="calculator90">
-                <div class="form-group">
-                    <label for="remainingFuel90">Remaining Fuel:</label>
-                    <div class="input-container">
-                        <input type="number" id="remainingFuel90" maxlength="5">
-                        <span class="unit">lbs</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="tripTaxiFuel">Trip+Taxi Fuel:</label>
-                    <div class="input-container">
-                        <input type="number" id="tripTaxiFuel" maxlength="5">
-                        <span class="unit">lbs</span>
-                    </div>
-                </div>
-                <div id="requiredFuelGroup90">
-                    <label for="requiredFuel90">Required Fuel:</label>
-                    <div class="input-container">
-                        <input type="number" id="requiredFuel90" readonly>
-                        <span class="unit">lbs</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="onBlockFuel">On Block Fuel:</label>
-                    <div class="input-container">
-                        <input type="number" id="onBlockFuel" readonly>
-                        <span class="unit">lbs</span>
-                    </div>
-                </div>
+        <div class="form-group">
+            <label for="requiredFuel">Required Fuel:</label>
+            <div class="input-container">
+                <input type="number" id="requiredFuel">
+                <span class="unit">lbs</span>
             </div>
         </div>
-    </div>
-
-    <!-- Page indicator -->
-    <div class="page-indicator">
-        <div class="dot active" id="dot1"></div>
-        <div class="dot" id="dot2"></div>
+        <div class="form-group">
+            <label for="fuelDensity">Fuel Density:</label>
+            <div class="input-container">
+                <input type="number" id="fuelDensity" value="0.7900" step="0.0001">
+                <span class="unit">kg/L</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="fuelTemperature">Fuel Temperature:</label>
+            <div class="input-container">
+                <input type="number" id="fuelTemperature">
+                <span class="unit">°C</span>
+            </div>
+        </div>
+        <div id="requiredUpliftGroup">
+            <label for="requiredUpliftLbs">Required Uplift:</label>
+            <div class="input-container">
+                <input type="number" id="requiredUpliftLbs">
+                <span class="unit">lbs</span>
+                <input type="number" id="requiredUpliftConverted" readonly>
+                <select id="upliftUnit">
+                    <option value="L">litrs</option>
+                    <option value="USG">USGal</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="actualUplift">Actual Uplift:</label>
+            <div class="input-container">
+                <input type="number" id="actualUplift">
+                <select id="actualUpliftUnit">
+                    <option value="L">Liters</option>
+                    <option value="USG">USGal</option>
+                    <option value="LBS">LBS</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="totalActualFuel">Total Actual Fuel:</label>
+            <div class="input-container">
+                <input type="number" id="totalActualFuel" readonly>
+                <span class="unit">lbs</span>
+            </div>
+        </div>
     </div>
 
     <button class="clear-button" id="clearButton">CLR</button>
@@ -292,7 +230,6 @@
     <script>
     window.onload = function() {
         const elements = {
-            // Prvá stránka
             remainingFuel: document.getElementById('remainingFuel'),
             requiredFuel: document.getElementById('requiredFuel'),
             fuelDensity: document.getElementById('fuelDensity'),
@@ -302,117 +239,13 @@
             upliftUnit: document.getElementById('upliftUnit'),
             actualUplift: document.getElementById('actualUplift'),
             actualUpliftUnit: document.getElementById('actualUpliftUnit'),
-            totalActualFuel: document.getElementById('totalActualFuel'),
-            
-            // Druhá stránka
-            remainingFuel90: document.getElementById('remainingFuel90'),
-            tripTaxiFuel: document.getElementById('tripTaxiFuel'),
-            requiredFuel90: document.getElementById('requiredFuel90'),
-            onBlockFuel: document.getElementById('onBlockFuel')
+            totalActualFuel: document.getElementById('totalActualFuel')
         };
 
-        let currentPage = 0;
         let lastActualUpliftLbs = 0;
-        
-        const container = document.getElementById('container');
-        const dot1 = document.getElementById('dot1');
-        const dot2 = document.getElementById('dot2');
-
-        // Swipe functionality
-        let startX = 0;
-        let startY = 0;
-        let isScrolling = false;
-
-        document.addEventListener('touchstart', function(e) {
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            isScrolling = undefined;
-        }, { passive: true });
-
-        document.addEventListener('touchmove', function(e) {
-            if (isScrolling === true) return;
-            
-            const currentX = e.touches[0].clientX;
-            const currentY = e.touches[0].clientY;
-            const diffX = startX - currentX;
-            const diffY = startY - currentY;
-            
-            if (isScrolling === undefined) {
-                isScrolling = Math.abs(diffY) > Math.abs(diffX);
-            }
-            
-            if (!isScrolling && Math.abs(diffX) > 10) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-
-        document.addEventListener('touchend', function(e) {
-            if (isScrolling) return;
-            
-            const endX = e.changedTouches[0].clientX;
-            const diffX = startX - endX;
-            
-            if (Math.abs(diffX) > 50) {
-                if (diffX > 0 && currentPage === 0) {
-                    // Swipe left - na druhú stránku
-                    currentPage = 1;
-                    container.style.transform = 'translateX(-50%)';
-                    dot1.classList.remove('active');
-                    dot2.classList.add('active');
-                } else if (diffX < 0 && currentPage === 1) {
-                    // Swipe right - na prvú stránku
-                    currentPage = 0;
-                    container.style.transform = 'translateX(0%)';
-                    dot2.classList.remove('active');
-                    dot1.classList.add('active');
-                }
-            }
-        }, { passive: true });
-
-        // Funkcie pre 90% calculator
-        function calculate90Percent() {
-            const remainingFuel90 = parseFloat(elements.remainingFuel90.value) || 0;
-            const tripTaxiFuel = parseFloat(elements.tripTaxiFuel.value) || 0;
-            
-            // Required Fuel = Remaining Fuel + 90% of Trip+Taxi Fuel
-            const requiredFuel90 = remainingFuel90 + (tripTaxiFuel * 0.9);
-            elements.requiredFuel90.value = Math.round(requiredFuel90);
-            
-            // On Block Fuel = Required Fuel - Trip+Taxi Fuel
-            const onBlockFuel = requiredFuel90 - tripTaxiFuel;
-            elements.onBlockFuel.value = Math.round(onBlockFuel);
-            
-            // Synchronizácia s prvou stránkou
-            elements.remainingFuel.value = Math.round(remainingFuel90);
-            elements.requiredFuel.value = Math.round(requiredFuel90);
-            updateCalculations();
-        }
-
-        // Event listeners pre 90% calculator
-        elements.remainingFuel90.addEventListener('input', calculate90Percent);
-        elements.tripTaxiFuel.addEventListener('input', calculate90Percent);
-
-        // Synchronizácia z prvej stránky
-        elements.remainingFuel.addEventListener('input', function() {
-            elements.remainingFuel90.value = this.value;
-            calculate90Percent();
-        });
-
-        elements.requiredFuel.addEventListener('input', function() {
-            const requiredFuel = parseFloat(this.value) || 0;
-            const remainingFuel = parseFloat(elements.remainingFuel.value) || 0;
-            const tripTaxiFuel = parseFloat(elements.tripTaxiFuel.value) || 0;
-            
-            if (tripTaxiFuel > 0) {
-                const newRemainingFuel = requiredFuel - (tripTaxiFuel * 0.9);
-                elements.remainingFuel90.value = Math.round(newRemainingFuel);
-                calculate90Percent();
-            }
-        });
 
         // Funkcia na vymazanie formulára
         function clearForm() {
-            // Prvá stránka
             elements.remainingFuel.value = '';
             elements.requiredFuel.value = '';
             elements.fuelDensity.value = '0.7900';
@@ -421,17 +254,9 @@
             elements.requiredUpliftConverted.value = '';
             elements.actualUplift.value = '';
             elements.totalActualFuel.value = '';
-            
-            // Druhá stránka
-            elements.remainingFuel90.value = '';
-            elements.tripTaxiFuel.value = '';
-            elements.requiredFuel90.value = '';
-            elements.onBlockFuel.value = '';
-            
             lastActualUpliftLbs = 0;
             updateCalculations();
         }
-
         // Offline event listenery
         window.addEventListener('offline', function() {
             console.log('Aplikácia je offline');
@@ -518,7 +343,7 @@
         });
 
         // Pridané event listenery pre Remaining a Required Fuel
-        ['requiredUpliftLbs'].forEach(id => {
+        ['remainingFuel', 'requiredFuel', 'requiredUpliftLbs'].forEach(id => {
             elements[id].addEventListener('input', updateCalculations);
         });
 
