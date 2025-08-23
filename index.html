@@ -381,33 +381,21 @@
             // On Block Fuel = Required Fuel - Trip+Taxi Fuel
             const onBlockFuel = requiredFuel90 - tripTaxiFuel;
             elements.onBlockFuel.value = Math.round(onBlockFuel);
-            
-            // Synchronizácia s prvou stránkou
-            elements.remainingFuel.value = Math.round(remainingFuel90);
-            elements.requiredFuel.value = Math.round(requiredFuel90);
-            updateCalculations();
         }
 
         // Event listeners pre 90% calculator
-        elements.remainingFuel90.addEventListener('input', calculate90Percent);
         elements.tripTaxiFuel.addEventListener('input', calculate90Percent);
 
-        // Synchronizácia z prvej stránky
+        // Synchronizácia iba medzi Remaining Fuel poliami
         elements.remainingFuel.addEventListener('input', function() {
             elements.remainingFuel90.value = this.value;
-            calculate90Percent();
+            updateCalculations();
         });
 
-        elements.requiredFuel.addEventListener('input', function() {
-            const requiredFuel = parseFloat(this.value) || 0;
-            const remainingFuel = parseFloat(elements.remainingFuel.value) || 0;
-            const tripTaxiFuel = parseFloat(elements.tripTaxiFuel.value) || 0;
-            
-            if (tripTaxiFuel > 0) {
-                const newRemainingFuel = requiredFuel - (tripTaxiFuel * 0.9);
-                elements.remainingFuel90.value = Math.round(newRemainingFuel);
-                calculate90Percent();
-            }
+        elements.remainingFuel90.addEventListener('input', function() {
+            elements.remainingFuel.value = this.value;
+            calculate90Percent();
+            updateCalculations();
         });
 
         // Funkcia na vymazanie formulára
@@ -517,8 +505,8 @@
             updateCalculations();
         });
 
-        // Pridané event listenery pre Remaining a Required Fuel
-        ['requiredUpliftLbs'].forEach(id => {
+        // Pridané event listenery pre Required Fuel a Required Uplift
+        ['requiredFuel', 'requiredUpliftLbs'].forEach(id => {
             elements[id].addEventListener('input', updateCalculations);
         });
 
