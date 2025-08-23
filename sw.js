@@ -38,7 +38,8 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         Promise.all([
             caches.open(CACHE_NAME).then(async (cache) => {
-                console.log('Vytváram novú cache');
+                console.log('🔧 Vytváram novú cache:', CACHE_NAME);
+                console.log('📋 Cachujem súbory:', CACHE_FILES);
                 // Pridanie časovej známky do cache
                 await cache.put('cache-timestamp', new Response(Date.now().toString()));
                 return cache.addAll(CACHE_FILES);
@@ -68,16 +69,20 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Zachytávanie požiadaviek - Cache First stratégia (offline-first)
+// Zachytávanie požiadaviek - Pravý Cache First (offline-first)
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         (async () => {
-            // Vždy najprv skús cache - offline-first prístup
+            // Debug: Log všetky fetch requesty
+            console.log('🔍 Fetch request:', event.request.url);
+            
+            // VŽDY najprv skús cache - bez akýchkoľvek validácií
             const cachedResponse = await caches.match(event.request);
             if (cachedResponse) {
-                // Background refresh len ak je cache stará, ale neblokuj offline funkcionalitu
-                const isCacheStillValid = await isCacheValid(CACHE_NAME);
-                if (!isCacheStillValid) {
+                console.log('✅ Serving from cache:', event.request.url);
+                
+                // Neblokujúci background refresh (len ak je online)
+                if (navigator.onLine) {
                     event.waitUntil(
                         fetch(event.request)
                             .then((networkResponse) => {
@@ -95,6 +100,7 @@ self.addEventListener('fetch', (event) => {
                             })
                     );
                 }
+                
                 return cachedResponse;
             }
 
@@ -109,17 +115,21 @@ self.addEventListener('fetch', (event) => {
                 const cache = await caches.open(CACHE_NAME);
                 await cache.put(event.request, networkResponse.clone());
                 await cache.put('cache-timestamp', new Response(Date.now().toString()));
+                console.log('Network response cached for:', event.request.url);
                 return networkResponse;
             } catch (error) {
-                console.log('Network fetch failed:', error);
-                // Ak network zlyhá, skús ešte raz cache (pre istotu)
+                console.log('❌ Network fetch failed:', error, 'for:', event.request.url);
+                
+                // Final fallback - skús znovu cache (možno sa tam niečo objavilo)
                 const fallbackCache = await caches.match(event.request);
                 if (fallbackCache) {
+                    console.log('✅ Using fallback cache for:', event.request.url);
                     return fallbackCache;
                 }
                 
+                console.log('❌ No cache found for:', event.request.url);
                 return new Response(
-                    'Aplikácia je offline. Prosím, skontrolujte pripojenie.',
+                    'Aplikácia je offline a súbor nie je v cache.',
                     { status: 503, statusText: 'Service Unavailable' }
                 );
             }
