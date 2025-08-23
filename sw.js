@@ -68,61 +68,56 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Zachytávanie požiadaviek - Cache First stratégia s kontrolou platnosti
+// Zachytávanie požiadaviek - Cache First stratégia (offline-first)
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         (async () => {
-            // Kontrola platnosti cache
-            const isCacheStillValid = await isCacheValid(CACHE_NAME);
-            if (!isCacheStillValid) {
-                // Ak cache vypršala, pokús sa o network request
-                try {
-                    const networkResponse = await fetch(event.request);
-                    const cache = await caches.open(CACHE_NAME);
-                    await cache.put(event.request, networkResponse.clone());
-                    await cache.put('cache-timestamp', new Response(Date.now().toString()));
-                    return networkResponse;
-                } catch (error) {
-                    // Ak network request zlyhá, skús použiť expired cache ako fallback
-                    const cachedResponse = await caches.match(event.request);
-                    if (cachedResponse) return cachedResponse;
-                }
-            }
-
-            // Štandardná Cache First logika
+            // Vždy najprv skús cache - offline-first prístup
             const cachedResponse = await caches.match(event.request);
             if (cachedResponse) {
-                // Background refresh
-                event.waitUntil(
-                    fetch(event.request)
-                        .then((networkResponse) => {
-                            if (networkResponse && networkResponse.status === 200) {
-                                return caches.open(CACHE_NAME)
-                                    .then((cache) => {
-                                        cache.put(event.request, networkResponse);
-                                        console.log('Cache updated for:', event.request.url);
-                                    });
-                            }
-                        })
-                        .catch(() => {
-                            console.log('Background refresh failed for:', event.request.url);
-                        })
-                );
+                // Background refresh len ak je cache stará, ale neblokuj offline funkcionalitu
+                const isCacheStillValid = await isCacheValid(CACHE_NAME);
+                if (!isCacheStillValid) {
+                    event.waitUntil(
+                        fetch(event.request)
+                            .then((networkResponse) => {
+                                if (networkResponse && networkResponse.status === 200) {
+                                    return caches.open(CACHE_NAME)
+                                        .then((cache) => {
+                                            cache.put(event.request, networkResponse.clone());
+                                            cache.put('cache-timestamp', new Response(Date.now().toString()));
+                                            console.log('Cache refreshed for:', event.request.url);
+                                        });
+                                }
+                            })
+                            .catch(() => {
+                                console.log('Background refresh failed for:', event.request.url);
+                            })
+                    );
+                }
                 return cachedResponse;
             }
 
-            // Network request s cachovaním
+            // Ak nie je v cache, pokús sa o network request
             try {
                 const networkResponse = await fetch(event.request);
                 if (!networkResponse || networkResponse.status !== 200) {
                     return networkResponse;
                 }
 
+                // Cachuj úspešný network response
                 const cache = await caches.open(CACHE_NAME);
                 await cache.put(event.request, networkResponse.clone());
+                await cache.put('cache-timestamp', new Response(Date.now().toString()));
                 return networkResponse;
             } catch (error) {
                 console.log('Network fetch failed:', error);
+                // Ak network zlyhá, skús ešte raz cache (pre istotu)
+                const fallbackCache = await caches.match(event.request);
+                if (fallbackCache) {
+                    return fallbackCache;
+                }
+                
                 return new Response(
                     'Aplikácia je offline. Prosím, skontrolujte pripojenie.',
                     { status: 503, statusText: 'Service Unavailable' }
