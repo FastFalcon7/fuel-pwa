@@ -606,8 +606,8 @@
                         }
                     };
 
-                    // Kontrola aktualizácií každú hodinu
-                    setInterval(checkForUpdates, 1000 * 60 * 60);
+                    // Kontrola aktualizácií každých 6 hodín (menej agresívne)
+                    setInterval(checkForUpdates, 1000 * 60 * 60 * 6);
 
                     // Kontrola pri obnovení pripojenia
                     window.addEventListener('online', checkForUpdates);
@@ -623,8 +623,8 @@
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
                     const timeSinceLastUpdate = Date.now() - lastUpdateCheck;
-                    if (timeSinceLastUpdate > 1000 * 60 * 60) { // hodina
-                        if (navigator.serviceWorker.controller) {
+                    if (timeSinceLastUpdate > 1000 * 60 * 60 * 6) { // 6 hodín
+                        if (navigator.serviceWorker.controller && navigator.onLine) {
                             navigator.serviceWorker.controller.postMessage({
                                 type: 'UPDATE_CACHE'
                             });

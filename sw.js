@@ -131,24 +131,30 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'UPDATE_CACHE') {
         event.waitUntil(
-            Promise.all([
-                caches.open(CACHE_NAME).then(cache => 
-                    cache.put('cache-timestamp', new Response(Date.now().toString()))
-                ),
-                ...CACHE_FILES.map(url => 
-                    fetch(url)
-                        .then(response => {
-                            if (response.ok) {
-                                return caches.open(CACHE_NAME)
-                                    .then(cache => cache.put(url, response));
-                            }
-                            throw new Error('Response not ok');
-                        })
-                        .catch(error => {
-                            console.error('Cache update failed for:', url, error);
-                        })
-                )
-            ])
+            // Len aktualizuj timestamp ak je online, neskúšaj fetchovať súbory
+            navigator.onLine ? 
+                Promise.all([
+                    caches.open(CACHE_NAME).then(cache => 
+                        cache.put('cache-timestamp', new Response(Date.now().toString()))
+                    ),
+                    ...CACHE_FILES.map(url => 
+                        fetch(url)
+                            .then(response => {
+                                if (response.ok) {
+                                    return caches.open(CACHE_NAME)
+                                        .then(cache => cache.put(url, response));
+                                }
+                                throw new Error('Response not ok');
+                            })
+                            .catch(error => {
+                                console.error('Cache update failed for:', url, error);
+                            })
+                    )
+                ]) :
+                // Offline - nerobíme nič, cache zostáva nedotknutá
+                Promise.resolve().then(() => {
+                    console.log('Offline - cache update preskočený');
+                })
         );
     }
 });
