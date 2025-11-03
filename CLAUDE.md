@@ -4,90 +4,89 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a standalone Progressive Web App (PWA) for calculating Jet A-1 fuel uplift requirements for aviation purposes. The app is built with vanilla HTML, CSS, and JavaScript - no build tools or frameworks required.
-
-## Development Commands
-
-**Local Development Server:**
-```bash
-# Python 3
-python3 -m http.server 8000
-
-# Python 2
-python -m SimpleHTTPServer 8000
-
-# Node.js (if http-server is installed)
-npx http-server -p 8000
-```
-
-Access the app at: `http://localhost:8000/fuel-pwa/`
-
-**Testing PWA Features:**
-- Use Chrome DevTools > Application tab to inspect service worker, manifest, and cache storage
-- Test offline functionality by checking "Offline" in the Network tab
-- Verify installability using Lighthouse PWA audit
+This is a **Progressive Web Application (PWA)** for aviation fuel calculations, specifically designed for Jet A-1 fuel uplift calculations. The application is a single-page web app that works offline and can be installed on mobile devices.
 
 ## Architecture
 
 ### File Structure
-- `index.html` - Single-page application with inline CSS and JavaScript
-- `manifest.json` - PWA manifest defining app metadata, icons, and display settings
-- `sw.js` - Service worker implementing cache-first strategy for offline functionality
-- `assets/` - App icons (48px to 512px) and screenshots for PWA installation
+- `index.html` - Main application file containing all HTML, CSS, and JavaScript
+- `manifest.json` - PWA manifest defining app metadata and icons
+- `sw.js` - Service Worker handling offline functionality and caching
+- `assets/` - Directory containing app icons and screenshots in various sizes
 
-### Key Design Decisions
+### Code Organization
+The application is built as a **single-file architecture** with all code embedded in `index.html`:
 
-**Inline Code**: All CSS and JavaScript are embedded in `index.html` for simplicity and minimal HTTP requests.
+1. **HTML Structure**: Two-page layout using CSS transforms for navigation
+   - Page 1: Standard fuel uplift calculator
+   - Page 2: "90%" fuel uplift calculator for specific aviation scenarios
 
-**Base Path**: The app is designed to be deployed at `/fuel-pwa/` path. All asset references use this prefix. Update these paths if deploying to a different location.
+2. **CSS Styling**: Responsive design with mobile-first approach
+   - Supports both mobile and desktop layouts
+   - Touch-friendly interface with swipe navigation
+   - Fixed positioning for clear button and page indicators
 
-**Responsive Design**:
-- Mobile-first with stacked layout on narrow screens
-- Switches to horizontal layout at 600px+ width
-- Prevents zooming on iOS (`user-scalable=no`)
+3. **JavaScript Functionality** (lines 292-650 in index.html):
+   - Fuel calculation logic with density/temperature conversions
+   - Unit conversion between pounds (lbs), liters (L), and US gallons (USG)
+   - Touch gesture handling for page navigation
+   - Form synchronization between both calculator pages
+   - Service Worker registration and offline functionality
 
-### Calculator Logic
+### Key Components
 
-The app performs aviation fuel calculations with these key functions:
+#### Fuel Calculation Logic
+- **Density calculations**: Temperature-based fuel density adjustments
+- **Unit conversions**: Between lbs, liters, and US gallons
+- **Required uplift**: Calculated from remaining fuel and required fuel
+- **90% calculation**: Specialized calculation for aviation fuel planning
 
-**Density-Temperature Relationship** (index.html:181-187):
-- Calculates fuel density based on temperature: `density = 0.79 + (15 - temperature) * 0.0007`
-- Bidirectional conversion between density and temperature
+#### PWA Features
+- **Offline functionality**: Service Worker caches all resources
+- **Installable**: Can be installed on mobile devices
+- **Responsive**: Works on all screen sizes
+- **Touch optimized**: Swipe navigation and pull-to-refresh
 
-**Unit Conversions** (index.html:189-211):
-- Converts between pounds (lbs), liters (L), and US gallons (USG)
-- Density-dependent conversion for weight-to-volume calculations
+#### Service Worker (sw.js)
+- **Cache strategy**: Cache-first with background refresh
+- **Cache expiration**: 7-day cache duration with automatic updates
+- **Offline fallback**: Graceful degradation when offline
 
-**Reactive Calculations**:
-- Required Uplift = Required Fuel - Remaining Fuel
-- Total Actual Fuel = Remaining Fuel + Actual Uplift
-- All calculations update in real-time via input event listeners
+## Development Notes
 
-### Service Worker Caching
+### No Build Process
+This project doesn't use any build tools or package managers. All code is vanilla HTML, CSS, and JavaScript. Simply open `index.html` in a web browser or serve it through a web server.
 
-**Cache Strategy**: Cache-first with network fallback (sw.js:49-78)
-- Serves cached content immediately for offline functionality
-- Falls back to network for uncached resources
-- Caches successful network responses dynamically
+### Testing
+- Test on mobile devices for touch interactions
+- Verify offline functionality by disabling network
+- Check PWA installation on mobile browsers
+- Test swipe navigation between calculator pages
 
-**Cache Versioning** (sw.js:1):
-- Version is `fuel-pwa-v1`
-- When updating the app, increment this version to force cache refresh
-- Old caches are automatically cleaned up on service worker activation (sw.js:34-46)
+### Deployment
+The app is designed to be deployed to a web server with the path `/fuel-pwa/`. All asset paths are absolute and include this prefix.
 
-## Making Changes
+### Code Style
+- Uses Slovak language for console messages and some comments
+- Follows functional programming patterns for calculations
+- Event-driven architecture for UI interactions
+- Extensive use of vanilla JavaScript without external dependencies
 
-**When modifying cached files** (index.html, manifest.json, or assets):
-1. Update `CACHE_NAME` version in `sw.js` (line 1) - e.g., `fuel-pwa-v2`
-2. Test with hard refresh (Ctrl+Shift+R) or clear cache in DevTools
-3. Verify service worker updates in Application tab
+## Key Functions
 
-**When changing base path**:
-- Update all `/fuel-pwa/` references in:
-  - index.html (lines 14-19: icon links, line 19: manifest link)
-  - manifest.json (start_url, scope, id, icon/screenshot src paths)
-  - sw.js (CACHE_FILES array)
+### Calculation Functions (index.html:449-513)
+- `calculateDensity(temperature)` - Calculates fuel density from temperature
+- `calculateTemperature(density)` - Reverse calculation
+- `convertToLiters/convertFromLiters` - Unit conversion utilities
+- `updateCalculations()` - Main calculation orchestrator
 
-**When adding new assets**:
-- Add asset path to `CACHE_FILES` array in `sw.js`
-- Increment `CACHE_NAME` version
+### UI Functions (index.html:321-647)
+- Swipe gesture handling for page navigation
+- Form synchronization between calculator pages
+- Pull-to-refresh functionality
+- Clear button functionality
+
+### Service Worker Functions (sw.js:24-159)
+- Cache validation with timestamp checking
+- Background refresh of cached resources
+- Message handling for cache updates
