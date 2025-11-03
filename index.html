@@ -31,7 +31,7 @@
         
         .container {
             display: flex;
-            width: 200vw;
+            width: 300vw;
             transition: transform 0.3s ease;
         }
         
@@ -96,6 +96,61 @@
             padding: 10px;
             border-radius: 4px;
             margin-bottom: 15px;
+        }
+
+        /* Štýly pre checklist */
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #FF8C00;
+            border-radius: 4px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .checklist-item.checked .checkbox {
+            background-color: #4CAF50;
+            border-color: #4CAF50;
+        }
+
+        .checkbox::after {
+            content: '✓';
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .checklist-item.checked .checkbox::after {
+            opacity: 1;
+        }
+
+        .checklist-item label {
+            color: #FF8C00;
+            font-weight: normal;
+            margin-bottom: 0;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            flex: 1;
+        }
+
+        .checklist-item.checked label {
+            color: #4CAF50;
         }
         
         h1 {
@@ -279,12 +334,64 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tretia stránka - Parking checklist -->
+        <div class="page" id="page3">
+            <h1>Parking Checklist</h1>
+            <div id="parkingChecklist">
+                <div class="checklist-item" data-item="sun-shields">
+                    <div class="checkbox"></div>
+                    <label>Sun shields</label>
+                </div>
+                <div class="checklist-item" data-item="chocks">
+                    <div class="checkbox"></div>
+                    <label>Chocks</label>
+                </div>
+                <div class="checklist-item" data-item="brake-off">
+                    <div class="checkbox"></div>
+                    <label>Brake OFF</label>
+                </div>
+                <div class="checklist-item" data-item="gear-rat-pins">
+                    <div class="checkbox"></div>
+                    <label>Gear/RAT pins</label>
+                </div>
+                <div class="checklist-item" data-item="probes-covers">
+                    <div class="checkbox"></div>
+                    <label>Probes covers</label>
+                </div>
+                <div class="checklist-item" data-item="nlg-disconnect">
+                    <div class="checkbox"></div>
+                    <label>NLG disconnect</label>
+                </div>
+                <div class="checklist-item" data-item="toilet-service">
+                    <div class="checkbox"></div>
+                    <label>Toilet service</label>
+                </div>
+                <div class="checklist-item" data-item="water-drain">
+                    <div class="checkbox"></div>
+                    <label>Water drain</label>
+                </div>
+                <div class="checklist-item" data-item="fuel-spillage">
+                    <div class="checkbox"></div>
+                    <label>Fuel spillage</label>
+                </div>
+                <div class="checklist-item" data-item="engine-apu-covers">
+                    <div class="checkbox"></div>
+                    <label>Engine/APU covers</label>
+                </div>
+                <div class="checklist-item" data-item="batteries">
+                    <div class="checkbox"></div>
+                    <label>Batteries</label>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Page indicator -->
     <div class="page-indicator">
         <div class="dot active" id="dot1"></div>
         <div class="dot" id="dot2"></div>
+        <div class="dot" id="dot3"></div>
     </div>
 
     <button class="clear-button" id="clearButton">CLR</button>
@@ -313,10 +420,11 @@
 
         let currentPage = 0;
         let lastActualUpliftLbs = 0;
-        
+
         const container = document.getElementById('container');
         const dot1 = document.getElementById('dot1');
         const dot2 = document.getElementById('dot2');
+        const dot3 = document.getElementById('dot3');
 
         // Swipe functionality
         let startX = 0;
@@ -348,26 +456,33 @@
 
         document.addEventListener('touchend', function(e) {
             if (isScrolling) return;
-            
+
             const endX = e.changedTouches[0].clientX;
             const diffX = startX - endX;
-            
+
             if (Math.abs(diffX) > 50) {
-                if (diffX > 0 && currentPage === 0) {
-                    // Swipe left - na druhú stránku
-                    currentPage = 1;
-                    container.style.transform = 'translateX(-100vw)';
-                    dot1.classList.remove('active');
-                    dot2.classList.add('active');
-                } else if (diffX < 0 && currentPage === 1) {
-                    // Swipe right - na prvú stránku
-                    currentPage = 0;
-                    container.style.transform = 'translateX(0)';
-                    dot2.classList.remove('active');
-                    dot1.classList.add('active');
+                if (diffX > 0) {
+                    // Swipe left - ďalšia stránka
+                    if (currentPage < 2) {
+                        currentPage++;
+                        updatePagePosition();
+                    }
+                } else if (diffX < 0) {
+                    // Swipe right - predošlá stránka
+                    if (currentPage > 0) {
+                        currentPage--;
+                        updatePagePosition();
+                    }
                 }
             }
         }, { passive: true });
+
+        function updatePagePosition() {
+            container.style.transform = `translateX(-${currentPage * 100}vw)`;
+            dot1.classList.toggle('active', currentPage === 0);
+            dot2.classList.toggle('active', currentPage === 1);
+            dot3.classList.toggle('active', currentPage === 2);
+        }
 
         // Funkcie pre 90% calculator
         function calculate90Percent() {
@@ -549,6 +664,45 @@
             }
             updateCalculations();
         });
+
+        // Parking checklist functionality
+        const checklistItems = document.querySelectorAll('.checklist-item');
+        const CHECKLIST_STORAGE_KEY = 'parkingChecklistState';
+
+        // Načítanie stavu checklistu z localStorage
+        function loadChecklistState() {
+            const savedState = localStorage.getItem(CHECKLIST_STORAGE_KEY);
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                checklistItems.forEach(item => {
+                    const itemKey = item.getAttribute('data-item');
+                    if (state[itemKey]) {
+                        item.classList.add('checked');
+                    }
+                });
+            }
+        }
+
+        // Uloženie stavu checklistu do localStorage
+        function saveChecklistState() {
+            const state = {};
+            checklistItems.forEach(item => {
+                const itemKey = item.getAttribute('data-item');
+                state[itemKey] = item.classList.contains('checked');
+            });
+            localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        // Toggle checkbox
+        checklistItems.forEach(item => {
+            item.addEventListener('click', function() {
+                this.classList.toggle('checked');
+                saveChecklistState();
+            });
+        });
+
+        // Načítanie uloženého stavu pri načítaní stránky
+        loadChecklistState();
 
         // Event listeners pre clear button a pull-to-refresh
         document.getElementById('clearButton').addEventListener('click', clearForm);
