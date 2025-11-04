@@ -540,6 +540,9 @@
             });
             localStorage.removeItem('parkingChecklistState');
 
+            // Vymazanie uloženého stavu kalkulačiek
+            localStorage.removeItem('fuelCalculatorState');
+
             lastActualUpliftLbs = 0;
             updateCalculations();
         }
@@ -713,6 +716,69 @@
         // Načítanie uloženého stavu pri načítaní stránky
         loadChecklistState();
 
+        // localStorage pre kalkulačky
+        const CALCULATOR_STORAGE_KEY = 'fuelCalculatorState';
+
+        // Funkcia na uloženie stavu kalkulačiek
+        function saveCalculatorState() {
+            const state = {
+                // Stránka 1
+                remainingFuel: elements.remainingFuel.value,
+                requiredFuel: elements.requiredFuel.value,
+                fuelDensity: elements.fuelDensity.value,
+                fuelTemperature: elements.fuelTemperature.value,
+                requiredUpliftLbs: elements.requiredUpliftLbs.value,
+                upliftUnit: elements.upliftUnit.value,
+                actualUplift: elements.actualUplift.value,
+                actualUpliftUnit: elements.actualUpliftUnit.value,
+                // Stránka 2
+                remainingFuel90: elements.remainingFuel90.value,
+                tripTaxiFuel: elements.tripTaxiFuel.value
+            };
+            localStorage.setItem(CALCULATOR_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        // Funkcia na načítanie stavu kalkulačiek
+        function loadCalculatorState() {
+            const savedState = localStorage.getItem(CALCULATOR_STORAGE_KEY);
+            if (savedState) {
+                try {
+                    const state = JSON.parse(savedState);
+                    // Stránka 1
+                    if (state.remainingFuel) elements.remainingFuel.value = state.remainingFuel;
+                    if (state.requiredFuel) elements.requiredFuel.value = state.requiredFuel;
+                    if (state.fuelDensity) elements.fuelDensity.value = state.fuelDensity;
+                    if (state.fuelTemperature) elements.fuelTemperature.value = state.fuelTemperature;
+                    if (state.requiredUpliftLbs) elements.requiredUpliftLbs.value = state.requiredUpliftLbs;
+                    if (state.upliftUnit) elements.upliftUnit.value = state.upliftUnit;
+                    if (state.actualUplift) elements.actualUplift.value = state.actualUplift;
+                    if (state.actualUpliftUnit) elements.actualUpliftUnit.value = state.actualUpliftUnit;
+                    // Stránka 2
+                    if (state.remainingFuel90) elements.remainingFuel90.value = state.remainingFuel90;
+                    if (state.tripTaxiFuel) elements.tripTaxiFuel.value = state.tripTaxiFuel;
+
+                    // Aktualizovať prepočty
+                    updateActualUpliftDisplay();
+                    calculate90Percent();
+                    updateCalculations();
+                } catch (error) {
+                    console.error('Chyba pri načítaní stavu kalkulačky:', error);
+                }
+            }
+        }
+
+        // Pridať ukladanie do všetkých input event listenerov
+        elements.remainingFuel.addEventListener('input', saveCalculatorState);
+        elements.requiredFuel.addEventListener('input', saveCalculatorState);
+        elements.fuelDensity.addEventListener('input', saveCalculatorState);
+        elements.fuelTemperature.addEventListener('input', saveCalculatorState);
+        elements.requiredUpliftLbs.addEventListener('input', saveCalculatorState);
+        elements.upliftUnit.addEventListener('change', saveCalculatorState);
+        elements.actualUplift.addEventListener('input', saveCalculatorState);
+        elements.actualUpliftUnit.addEventListener('change', saveCalculatorState);
+        elements.remainingFuel90.addEventListener('input', saveCalculatorState);
+        elements.tripTaxiFuel.addEventListener('input', saveCalculatorState);
+
         // Event listeners pre clear button a pull-to-refresh
         document.getElementById('clearButton').addEventListener('click', clearForm);
 
@@ -744,11 +810,17 @@
         }, { passive: true });
 
         // Inicializácia
-        elements.requiredUpliftLbs.value = '';
-        elements.requiredUpliftConverted.value = '';
-        elements.fuelTemperature.value = '15';
-        elements.fuelDensity.value = '0.7900';
-        updateCalculations();
+        // Načítať uložené hodnoty alebo nastaviť predvolené
+        const hasStoredData = localStorage.getItem(CALCULATOR_STORAGE_KEY);
+        if (hasStoredData) {
+            loadCalculatorState();
+        } else {
+            elements.requiredUpliftLbs.value = '';
+            elements.requiredUpliftConverted.value = '';
+            elements.fuelTemperature.value = '15';
+            elements.fuelDensity.value = '0.7900';
+            updateCalculations();
+        }
 
         // Registrácia Service Workera
         if ('serviceWorker' in navigator) {
