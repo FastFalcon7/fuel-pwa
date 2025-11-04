@@ -1,5 +1,5 @@
-const CACHE_NAME = 'fuel-pwa-v5';
-const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v5';
+const CACHE_NAME = 'fuel-pwa-v6';
+const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v6';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 dní v milisekundách
 
 const CACHE_FILES = [
