@@ -157,6 +157,7 @@
         h1 {
             font-size: 1.5em;
             margin-bottom: 20px;
+            color: #FFD700; /* Dočasná žltá farba pre identifikáciu novej verzie */
         }
         @media (min-width: 600px) {
             body {
@@ -421,7 +422,6 @@
 
         let currentPage = 0;
         let lastActualUpliftLbs = 0;
-        let activeEditField = null; // Sledovanie aktívneho editovaného poľa
 
         const container = document.getElementById('container');
         const dot1 = document.getElementById('dot1');
@@ -609,14 +609,21 @@
             const requiredFuelLbs = parseFloat(elements.requiredFuel.value) || 0;
             let upliftLbs = parseFloat(elements.requiredUpliftLbs.value) || 0;
 
+            // Kontrola či používateľ práve edituje pole pomocou document.activeElement
+            const isEditingRequiredFuel = document.activeElement === elements.requiredFuel;
+            const isEditingRequiredUplift = document.activeElement === elements.requiredUpliftLbs;
+
             // Ak používateľ edituje requiredFuel alebo requiredUpliftLbs, neprepočítavame tieto polia
-            if (remainingFuelLbs && requiredFuelLbs && activeEditField !== 'requiredFuel' && activeEditField !== 'requiredUpliftLbs') {
+            if (remainingFuelLbs && requiredFuelLbs && !isEditingRequiredFuel && !isEditingRequiredUplift) {
                 // Štandardný výpočet: Required Uplift = Required Fuel - Remaining Fuel
                 upliftLbs = requiredFuelLbs - remainingFuelLbs;
                 elements.requiredUpliftLbs.value = Math.round(upliftLbs);
-            } else if (activeEditField === 'requiredUpliftLbs' && upliftLbs && remainingFuelLbs) {
+            } else if (isEditingRequiredUplift && upliftLbs && remainingFuelLbs) {
                 // Ak používateľ edituje Required Uplift, prepočítame Required Fuel
-                elements.requiredFuel.value = Math.round(remainingFuelLbs + upliftLbs);
+                // ale len ak pole requiredFuel nie je aktívne
+                if (!isEditingRequiredFuel) {
+                    elements.requiredFuel.value = Math.round(remainingFuelLbs + upliftLbs);
+                }
             }
 
             elements.requiredUpliftConverted.value = Math.round(
@@ -635,15 +642,6 @@
         // Pridané event listenery pre Required Fuel a Required Uplift
         ['requiredFuel', 'requiredUpliftLbs'].forEach(id => {
             elements[id].addEventListener('input', updateCalculations);
-
-            // Sledovanie, ktoré pole sa edituje
-            elements[id].addEventListener('focus', function() {
-                activeEditField = id;
-            });
-
-            elements[id].addEventListener('blur', function() {
-                activeEditField = null;
-            });
         });
 
         elements.actualUpliftUnit.addEventListener('change', function() {
