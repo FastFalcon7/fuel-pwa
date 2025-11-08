@@ -421,7 +421,6 @@
 
         let currentPage = 0;
         let lastActualUpliftLbs = 0;
-        let activeEditField = null; // Sledovanie aktívneho editovaného poľa
 
         const container = document.getElementById('container');
         const dot1 = document.getElementById('dot1');
@@ -609,13 +608,10 @@
             const requiredFuelLbs = parseFloat(elements.requiredFuel.value) || 0;
             let upliftLbs = parseFloat(elements.requiredUpliftLbs.value) || 0;
 
-            // Ak používateľ edituje requiredFuel alebo requiredUpliftLbs, neprepočítavame tieto polia
-            if (remainingFuelLbs && requiredFuelLbs && activeEditField !== 'requiredFuel' && activeEditField !== 'requiredUpliftLbs') {
-                // Štandardný výpočet: Required Uplift = Required Fuel - Remaining Fuel
+            if (remainingFuelLbs && requiredFuelLbs) {
                 upliftLbs = requiredFuelLbs - remainingFuelLbs;
                 elements.requiredUpliftLbs.value = Math.round(upliftLbs);
-            } else if (activeEditField === 'requiredUpliftLbs' && upliftLbs && remainingFuelLbs) {
-                // Ak používateľ edituje Required Uplift, prepočítame Required Fuel
+            } else if (upliftLbs) {
                 elements.requiredFuel.value = Math.round(remainingFuelLbs + upliftLbs);
             }
 
@@ -635,15 +631,6 @@
         // Pridané event listenery pre Required Fuel a Required Uplift
         ['requiredFuel', 'requiredUpliftLbs'].forEach(id => {
             elements[id].addEventListener('input', updateCalculations);
-
-            // Sledovanie, ktoré pole sa edituje
-            elements[id].addEventListener('focus', function() {
-                activeEditField = id;
-            });
-
-            elements[id].addEventListener('blur', function() {
-                activeEditField = null;
-            });
         });
 
         elements.actualUpliftUnit.addEventListener('change', function() {
