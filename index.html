@@ -157,6 +157,7 @@
         h1 {
             font-size: 1.5em;
             margin-bottom: 20px;
+            color: #35c94e;
         }
         @media (min-width: 600px) {
             body {
@@ -250,7 +251,7 @@
                 <div class="form-group">
                     <label for="requiredFuel">Required Fuel:</label>
                     <div class="input-container">
-                        <input type="number" id="requiredFuel">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="requiredFuel">
                         <span class="unit">lbs</span>
                     </div>
                 </div>
