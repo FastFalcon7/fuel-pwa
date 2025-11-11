@@ -157,7 +157,7 @@
         h1 {
             font-size: 1.5em;
             margin-bottom: 20px;
-            color: #0066cc;
+            color: #35c94e;
         }
         @media (min-width: 600px) {
             body {
@@ -278,6 +278,7 @@
                         <select id="upliftUnit">
                             <option value="L">liters</option>
                             <option value="USG">USgal</option>
+                            <option value="LBS">lbs</option>
                         </select>
                     </div>
                 </div>
@@ -285,11 +286,7 @@
                     <label for="actualUplift">Actual Uplift:</label>
                     <div class="input-container">
                         <input type="number" id="actualUplift">
-                        <select id="actualUpliftUnit">
-                            <option value="L">liters</option>
-                            <option value="USG">USgal</option>
-                            <option value="LBS">lbs</option>
-                        </select>
+                        <span class="unit" id="actualUpliftUnit">liters</span>
                     </div>
                 </div>
                 <div class="form-group">
@@ -590,8 +587,24 @@
             return convertFromLiters(liters, toUnit);
         }
 
+        // Helper funkcia na získanie aktuálnej jednotky pre Actual Uplift (z Required Uplift dropdown)
+        function getActualUpliftUnit() {
+            return elements.upliftUnit.value;
+        }
+
+        // Helper funkcia na aktualizáciu textu jednotiek v Actual Uplift spane
+        function updateActualUpliftUnitText() {
+            const unit = getActualUpliftUnit();
+            const unitTexts = {
+                'L': 'liters',
+                'USG': 'USgal',
+                'LBS': 'lbs'
+            };
+            elements.actualUpliftUnit.textContent = unitTexts[unit] || 'liters';
+        }
+
         function updateActualUpliftDisplay() {
-            const currentUnit = elements.actualUpliftUnit.value;
+            const currentUnit = getActualUpliftUnit();
             const currentValue = parseFloat(elements.actualUplift.value) || 0;
             const currentValueInLbs = convertValue(currentValue, currentUnit, 'LBS');
             lastActualUpliftLbs = currentValueInLbs;
@@ -654,19 +667,13 @@
             updateCalculations('requiredUpliftLbs');
         });
 
-        elements.actualUpliftUnit.addEventListener('change', function() {
-            convertActualUpliftToNewUnit(this.value);
-            updateCalculations();
-        });
-
+        // Keď sa zmení jednotka v Required Uplift, aktualizuj aj Actual Uplift
         elements.upliftUnit.addEventListener('change', function() {
             const selectedUnit = this.value;
-            if (selectedUnit === 'USG') {
-                if (elements.actualUpliftUnit.value !== 'LBS') {
-                    elements.actualUpliftUnit.value = 'USG';
-                    convertActualUpliftToNewUnit('USG');
-                }
-            }
+            // Aktualizuj text jednotiek v Actual Uplift spane
+            updateActualUpliftUnitText();
+            // Prepočítaj hodnotu v Actual Uplift na novú jednotku
+            convertActualUpliftToNewUnit(selectedUnit);
             updateCalculations();
         });
 
@@ -677,7 +684,7 @@
             }
             if (elements.actualUplift.value) {
                 updateActualUpliftDisplay();
-                convertActualUpliftToNewUnit(elements.actualUpliftUnit.value);
+                convertActualUpliftToNewUnit(getActualUpliftUnit());
             }
             updateCalculations();
         });
@@ -689,7 +696,7 @@
             }
             if (elements.actualUplift.value) {
                 updateActualUpliftDisplay();
-                convertActualUpliftToNewUnit(elements.actualUpliftUnit.value);
+                convertActualUpliftToNewUnit(getActualUpliftUnit());
             }
             updateCalculations();
         });
