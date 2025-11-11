@@ -157,6 +157,7 @@
         h1 {
             font-size: 1.5em;
             margin-bottom: 20px;
+            color: #0066cc;
         }
         @media (min-width: 600px) {
             body {
@@ -250,7 +251,7 @@
                 <div class="form-group">
                     <label for="requiredFuel">Required Fuel:</label>
                     <div class="input-container">
-                        <input type="number" id="requiredFuel">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="requiredFuel">
                         <span class="unit">lbs</span>
                     </div>
                 </div>
@@ -602,17 +603,33 @@
             elements.actualUplift.value = Math.round(newValue);
         }
 
-        function updateCalculations() {
+        function updateCalculations(sourceField) {
             const density = parseFloat(elements.fuelDensity.value) || 0.79;
             const remainingFuelLbs = parseFloat(elements.remainingFuel.value) || 0;
             const requiredFuelLbs = parseFloat(elements.requiredFuel.value) || 0;
             let upliftLbs = parseFloat(elements.requiredUpliftLbs.value) || 0;
 
-            if (remainingFuelLbs && requiredFuelLbs) {
-                upliftLbs = requiredFuelLbs - remainingFuelLbs;
-                elements.requiredUpliftLbs.value = Math.round(upliftLbs);
-            } else if (upliftLbs) {
-                elements.requiredFuel.value = Math.round(remainingFuelLbs + upliftLbs);
+            // Keď užívateľ edituje requiredFuel, prepočítaj iba uplift (NEPREPISUJ requiredFuel)
+            if (sourceField === 'requiredFuel') {
+                if (remainingFuelLbs && requiredFuelLbs) {
+                    upliftLbs = requiredFuelLbs - remainingFuelLbs;
+                    elements.requiredUpliftLbs.value = Math.round(upliftLbs);
+                }
+            }
+            // Keď užívateľ edituje requiredUpliftLbs, prepočítaj requiredFuel
+            else if (sourceField === 'requiredUpliftLbs') {
+                if (upliftLbs) {
+                    elements.requiredFuel.value = Math.round(remainingFuelLbs + upliftLbs);
+                }
+            }
+            // Pre ostatné polia (density, temperature, remainingFuel) použij pôvodnú logiku
+            else {
+                if (remainingFuelLbs && requiredFuelLbs) {
+                    upliftLbs = requiredFuelLbs - remainingFuelLbs;
+                    elements.requiredUpliftLbs.value = Math.round(upliftLbs);
+                } else if (upliftLbs) {
+                    elements.requiredFuel.value = Math.round(remainingFuelLbs + upliftLbs);
+                }
             }
 
             elements.requiredUpliftConverted.value = Math.round(
@@ -629,8 +646,12 @@
         });
 
         // Pridané event listenery pre Required Fuel a Required Uplift
-        ['requiredFuel', 'requiredUpliftLbs'].forEach(id => {
-            elements[id].addEventListener('input', updateCalculations);
+        elements.requiredFuel.addEventListener('input', function() {
+            updateCalculations('requiredFuel');
+        });
+
+        elements.requiredUpliftLbs.addEventListener('input', function() {
+            updateCalculations('requiredUpliftLbs');
         });
 
         elements.actualUpliftUnit.addEventListener('change', function() {
