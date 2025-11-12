@@ -1,4 +1,6 @@
-const CACHE_NAME = 'fuel-pwa-v11';
+const CACHE_NAME = 'fuel-pwa-v12';
+const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v12';
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 dní v milisekundách
 
 const CACHE_FILES = [
     '/fuel-pwa/',
@@ -18,57 +20,140 @@ const CACHE_FILES = [
     '/fuel-pwa/assets/icon-512x512.png'
 ];
 
-// Install - cachuj všetky súbory
+// Pomocná funkcia na kontrolu platnosti cache
+async function isCacheValid(cacheName) {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    if (keys.length === 0) return false;
+
+    const cacheTimestamp = await cache.match('cache-timestamp');
+    if (!cacheTimestamp) return false;
+
+    const timestamp = await cacheTimestamp.text();
+    return Date.now() - parseInt(timestamp) < CACHE_DURATION;
+}
+
+// Inštalácia Service Workera
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(CACHE_FILES))
-            .then(() => self.skipWaiting())
+        Promise.all([
+            caches.open(CACHE_NAME).then(async (cache) => {
+                console.log('🔧 Vytváram novú cache:', CACHE_NAME);
+                console.log('📋 Cachujem súbory:', CACHE_FILES);
+                // Pridanie časovej známky do cache
+                await cache.put('cache-timestamp', new Response(Date.now().toString()));
+                return cache.addAll(CACHE_FILES);
+            }),
+            self.skipWaiting()
+        ])
     );
 });
 
-// Activate - vymaž staré cache
+// Aktivácia Service Workera
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys()
-            .then((cacheNames) => {
+        Promise.all([
+            // Vyčistenie starých cache
+            caches.keys().then((cacheNames) => {
                 return Promise.all(
-                    cacheNames
-                        .filter((name) => name !== CACHE_NAME)
-                        .map((name) => caches.delete(name))
+                    cacheNames.map((cacheName) => {
+                        if (cacheName !== CACHE_NAME && cacheName !== DYNAMIC_CACHE) {
+                            console.log('Mažem starú cache:', cacheName);
+                            return caches.delete(cacheName);
+                        }
+                    })
                 );
-            })
-            .then(() => self.clients.claim())
+            }),
+            self.clients.claim()
+        ])
     );
 });
 
-// Fetch - SIMPLE cache-first, NO navigator.onLine!
+// Zachytávanie požiadaviek - Pravý Cache First (offline-first)
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request)
-            .then((cachedResponse) => {
-                // Ak je v cache, vráť to
-                if (cachedResponse) {
-                    return cachedResponse;
+        (async () => {
+            // VŽDY najprv skús cache - bez akýchkoľvek validácií
+            const cachedResponse = await caches.match(event.request);
+            if (cachedResponse) {
+                // Neblokujúci background refresh (len ak je online)
+                if (navigator.onLine) {
+                    event.waitUntil(
+                        fetch(event.request)
+                            .then((networkResponse) => {
+                                if (networkResponse && networkResponse.status === 200) {
+                                    return caches.open(CACHE_NAME)
+                                        .then((cache) => {
+                                            cache.put(event.request, networkResponse.clone());
+                                            cache.put('cache-timestamp', new Response(Date.now().toString()));
+                                        });
+                                }
+                            })
+                            .catch(() => {
+                                // Background refresh failed - no problem
+                            })
+                    );
                 }
 
-                // Ak nie je v cache, skús fetch
-                return fetch(event.request)
-                    .then((networkResponse) => {
-                        // Cachuj úspešnú odpoveď pre budúce použitie
-                        if (networkResponse && networkResponse.status === 200) {
-                            return caches.open(CACHE_NAME)
-                                .then((cache) => {
-                                    cache.put(event.request, networkResponse.clone());
-                                    return networkResponse;
-                                });
-                        }
-                        return networkResponse;
-                    })
-                    .catch(() => {
-                        // Network zlyhal - skús znovu cache (fallback)
-                        return caches.match(event.request);
-                    });
-            })
+                return cachedResponse;
+            }
+
+            // Ak nie je v cache, pokús sa o network request
+            try {
+                const networkResponse = await fetch(event.request);
+                if (!networkResponse || networkResponse.status !== 200) {
+                    return networkResponse;
+                }
+
+                // Cachuj úspešný network response
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(event.request, networkResponse.clone());
+                await cache.put('cache-timestamp', new Response(Date.now().toString()));
+                return networkResponse;
+            } catch (error) {
+                // Final fallback - skús znovu cache (možno sa tam niečo objavilo)
+                const fallbackCache = await caches.match(event.request);
+                if (fallbackCache) {
+                    return fallbackCache;
+                }
+
+                return new Response(
+                    'Aplikácia je offline a súbor nie je v cache.',
+                    { status: 503, statusText: 'Service Unavailable' }
+                );
+            }
+        })()
     );
+});
+
+// Spracovanie správ
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'UPDATE_CACHE') {
+        event.waitUntil(
+            // Len aktualizuj timestamp ak je online, neskúšaj fetchovať súbory
+            navigator.onLine ?
+                Promise.all([
+                    caches.open(CACHE_NAME).then(cache =>
+                        cache.put('cache-timestamp', new Response(Date.now().toString()))
+                    ),
+                    ...CACHE_FILES.map(url =>
+                        fetch(url)
+                            .then(response => {
+                                if (response.ok) {
+                                    return caches.open(CACHE_NAME)
+                                        .then(cache => cache.put(url, response));
+                                }
+                                throw new Error('Response not ok');
+                            })
+                            .catch(error => {
+                                console.error('Cache update failed for:', url, error);
+                            })
+                    )
+                ]) :
+                // Offline - nerobíme nič, cache zostáva nedotknutá
+                Promise.resolve().then(() => {
+                    console.log('Offline - cache update preskočený');
+                })
+        );
+    }
 });
