@@ -36,9 +36,11 @@ The application is built as a **single-file architecture** with all code embedde
    - Touch gesture handling for page navigation (swipe left/right)
    - Form synchronization between both calculator pages
    - Pull-to-refresh functionality for clearing forms
-   - Checklist state persistence using localStorage
+   - **Form values persistence** using localStorage (all input fields)
+   - **Checklist state persistence** using localStorage
    - Service Worker registration and offline functionality
    - Mobile-optimized numeric keyboard (inputmode="decimal")
+   - **Version display** in bottom left corner
 
 ### Key Components
 
@@ -53,13 +55,15 @@ The application is built as a **single-file architecture** with all code embedde
 - **Installable**: Can be installed on iPhone/iPad via Safari "Add to Home Screen"
 - **Responsive**: Works on all screen sizes
 - **Touch optimized**: Swipe navigation and pull-to-clear functionality
-- **Persistent storage**: Checklist state saved in localStorage
+- **Persistent storage**: All form values and checklist state saved in localStorage
+- **Version tracking**: Version number visible in bottom left corner (v0.0, v0.1, etc.)
 
 #### Service Worker (sw.js)
 - **Cache strategy**: Cache-first with background refresh
 - **Cache expiration**: 7-day cache duration with automatic updates
 - **Offline fallback**: Graceful degradation when offline
-- **Current version**: v8 (update this when cache version changes)
+- **Current cache version**: v9 (update this when cache version changes)
+- **Current app version**: v0.0 (displayed in UI)
 
 ## Development Notes
 
@@ -101,9 +105,12 @@ All asset paths are absolute and include the `/fuel-pwa/` prefix.
 ### UI Functions
 - Swipe gesture handling for page navigation (left/right between 3 pages)
 - Form synchronization between calculator pages
-- Pull-to-refresh functionality (clears forms)
-- Clear button functionality (bottom right, clears all inputs)
+- Pull-to-refresh functionality (clears forms and localStorage)
+- Clear button functionality (bottom right, clears all inputs and localStorage)
 - Checklist management with localStorage persistence
+- Form values persistence (auto-save on every input change)
+- `loadFormState()` - Restores all form values from localStorage on page load
+- `saveFormState()` - Saves all form values to localStorage
 
 ### Service Worker Functions
 - Cache validation with timestamp checking
@@ -112,8 +119,42 @@ All asset paths are absolute and include the `/fuel-pwa/` prefix.
 
 ## Important Notes
 
+### Version Management
+**IMPORTANT:** Every time you make changes to the app, you MUST update version numbers:
+
+1. **Update app version in HTML** (index.html):
+   - Find: `<div id="versionInfo">v0.0</div>`
+   - Change to: `v0.1`, `v0.2`, `v0.3`, etc. (increment by 0.1 each time)
+   - This version is visible to users in bottom left corner
+
+2. **Update cache version in sw.js**:
+   - Increment `CACHE_NAME` from `fuel-pwa-v9` to `fuel-pwa-v10`, etc.
+   - Increment `DYNAMIC_CACHE` similarly (e.g., `fuel-pwa-dynamic-v9` → `fuel-pwa-dynamic-v10`)
+   - This forces all users to download fresh app files
+
+3. **Update CLAUDE.md**:
+   - Update "Current cache version" under "Service Worker" section
+   - Update "Current app version" under "Service Worker" section
+
+**Why this matters:**
+- Users can verify they have the latest version (check bottom left)
+- Cache version change forces browser to download updated files
+- Prevents users from running old cached versions with bugs
+
 ### Input Fields
 All input fields use `type="text"` with `inputmode="decimal"` to ensure numeric keyboard appears on mobile devices (iPhone/iPad). This provides better user experience than `type="number"`.
+
+### Form Persistence
+- All input field values are automatically saved to localStorage on every change
+- Values persist after closing/reopening the app
+- Saved fields: `remainingFuel`, `requiredFuel`, `fuelDensity`, `fuelTemperature`, `requiredUpliftLbs`, `actualUplift`, `remainingFuel90`, `tripTaxiFuel`
+- Clear button removes both form values and checklist state from localStorage
+- Uses storage key: `fuelCalculatorFormState`
+
+### Checklist Persistence
+- Checklist state saved to localStorage automatically when items are checked/unchecked
+- Persists after app close/reopen
+- Uses storage key: `parkingChecklistState`
 
 ### Cache Management
 When making significant changes to the app:
@@ -122,4 +163,4 @@ When making significant changes to the app:
 3. This forces cache refresh for all users
 
 ### Pull-to-Refresh
-Pull-to-refresh gesture **clears the form** (same as Clear button). It does NOT refresh/update the app.
+Pull-to-refresh gesture **clears the form and localStorage** (same as Clear button). It does NOT refresh/update the app.
