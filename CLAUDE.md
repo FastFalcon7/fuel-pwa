@@ -59,12 +59,12 @@ The application is built as a **single-file architecture** with all code embedde
 - **Version tracking**: Version number visible in bottom left corner (v0.0, v0.1, etc.)
 
 #### Service Worker (sw.js)
-- **Cache strategy**: Cache-first with background refresh
-- **Cache expiration**: 7-day cache duration with automatic updates
-- **Offline fallback**: Graceful degradation when offline
-- **Robust caching**: Individual file caching with error handling (not addAll)
-- **Current cache version**: v10 (update this when cache version changes)
-- **Current app version**: v0.1 (displayed in UI)
+- **Cache strategy**: SIMPLE cache-first (cache → network → cache fallback)
+- **Offline functionality**: Reliable - tested 20+ minutes offline
+- **CRITICAL**: NO navigator.onLine (doesn't exist in SW context!)
+- **CRITICAL**: NO console.log in fetch handler (causes memory issues)
+- **Current cache version**: v11 (update this when cache version changes)
+- **Current app version**: v0.2 (displayed in UI)
 
 ## Development Notes
 
@@ -165,3 +165,16 @@ When making significant changes to the app:
 
 ### Pull-to-Refresh
 Pull-to-refresh gesture **clears the form and localStorage** (same as Clear button). It does NOT refresh/update the app.
+
+### Service Worker Critical Rules
+**NEVER use these in Service Worker context:**
+- ❌ `navigator.onLine` - does NOT exist in SW, causes crashes
+- ❌ Excessive `console.log` in fetch handler - fills memory, causes issues
+- ❌ Complex timestamp/cache validations - causes offline failures
+- ❌ Background refresh checks with `navigator.onLine`
+
+**ALWAYS use:**
+- ✅ Simple cache-first strategy: `caches.match()` → `fetch()` → `caches.match()` fallback
+- ✅ Minimal logging (only in install/activate)
+- ✅ Pure promises without async/await complexity
+- ✅ Test offline for 20+ minutes to verify
