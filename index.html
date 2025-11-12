@@ -231,10 +231,20 @@
             transform: translateY(-100%);
             transition: transform 0.2s;
         }
+
+        #versionInfo {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 11px;
+            color: #999;
+            z-index: 999;
+        }
     </style>
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
+    <div id="versionInfo">v0.0</div>
     
     <div class="container" id="container">
         <!-- Prvá stránka - pôvodný calculator -->
@@ -536,6 +546,7 @@
                 item.classList.remove('checked');
             });
             localStorage.removeItem('parkingChecklistState');
+            localStorage.removeItem('fuelCalculatorFormState');
 
             lastActualUpliftLbs = 0;
             updateCalculations();
@@ -739,6 +750,52 @@
 
         // Načítanie uloženého stavu pri načítaní stránky
         loadChecklistState();
+
+        // Form values persistence
+        const FORM_STORAGE_KEY = 'fuelCalculatorFormState';
+        const inputFields = [
+            'remainingFuel', 'requiredFuel', 'fuelDensity', 'fuelTemperature',
+            'requiredUpliftLbs', 'actualUplift', 'remainingFuel90', 'tripTaxiFuel'
+        ];
+
+        // Load saved form values
+        function loadFormState() {
+            const savedState = localStorage.getItem(FORM_STORAGE_KEY);
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                inputFields.forEach(fieldId => {
+                    const element = document.getElementById(fieldId);
+                    if (element && state[fieldId] !== undefined && state[fieldId] !== '') {
+                        element.value = state[fieldId];
+                    }
+                });
+                // Trigger calculations after loading
+                updateCalculations();
+            }
+        }
+
+        // Save form values
+        function saveFormState() {
+            const state = {};
+            inputFields.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    state[fieldId] = element.value;
+                }
+            });
+            localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        // Add input listeners to save on change
+        inputFields.forEach(fieldId => {
+            const element = document.getElementById(fieldId);
+            if (element) {
+                element.addEventListener('input', saveFormState);
+            }
+        });
+
+        // Load saved form state on page load
+        loadFormState();
 
         // Event listeners pre clear button a pull-to-refresh
         document.getElementById('clearButton').addEventListener('click', clearForm);

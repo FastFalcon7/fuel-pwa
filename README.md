@@ -5,7 +5,7 @@
 1. Open Safari: https://fastfalcon7.github.io/fuel-pwa/
 2. Tap Share button (square with arrow)
 3. Scroll down → tap "Add to Home Screen"
-4. Edit name if needed → tap "Add"
+4. Edit name if needed → (on iPad check Open as Web App is selected) → tap "Add"
 
 ## Usage
 
@@ -13,7 +13,7 @@
 - Swipe left/right to switch between pages
 
 **Clear screen:**
-- Tap red "Clear" button (bottom right)
+- Tap green "Clear" button (bottom right)
 - Or pull down on any page
 
 **Pages:**
@@ -25,5 +25,6 @@
 
 When new version is available:
 1. Delete app from Home Screen
-2. Open Safari → Settings → Safari → Clear History and Website Data
+2. Open → Settings → Safari → Clear History and Website Data
 3. Reinstall using installation steps above
+4. Check version number (bottom left)
