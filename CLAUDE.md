@@ -13,25 +13,32 @@ This is a **Progressive Web Application (PWA)** for aviation fuel calculations, 
 - `manifest.json` - PWA manifest defining app metadata and icons
 - `sw.js` - Service Worker handling offline functionality and caching
 - `assets/` - Directory containing app icons and screenshots in various sizes
+- `README.md` - User guide for installation and usage on iOS devices
 
 ### Code Organization
 The application is built as a **single-file architecture** with all code embedded in `index.html`:
 
-1. **HTML Structure**: Two-page layout using CSS transforms for navigation
+1. **HTML Structure**: Three-page layout using CSS transforms for navigation
    - Page 1: Standard fuel uplift calculator
    - Page 2: "90%" fuel uplift calculator for specific aviation scenarios
+   - Page 3: Parking checklist with interactive checkboxes
 
 2. **CSS Styling**: Responsive design with mobile-first approach
    - Supports both mobile and desktop layouts
    - Touch-friendly interface with swipe navigation
    - Fixed positioning for clear button and page indicators
+   - Blue color scheme for page titles (#0066cc)
+   - Orange checklist items with hover/checked states
 
-3. **JavaScript Functionality** (lines 292-650 in index.html):
+3. **JavaScript Functionality**:
    - Fuel calculation logic with density/temperature conversions
    - Unit conversion between pounds (lbs), liters (L), and US gallons (USG)
-   - Touch gesture handling for page navigation
+   - Touch gesture handling for page navigation (swipe left/right)
    - Form synchronization between both calculator pages
+   - Pull-to-refresh functionality for clearing forms
+   - Checklist state persistence using localStorage
    - Service Worker registration and offline functionality
+   - Mobile-optimized numeric keyboard (inputmode="decimal")
 
 ### Key Components
 
@@ -43,14 +50,16 @@ The application is built as a **single-file architecture** with all code embedde
 
 #### PWA Features
 - **Offline functionality**: Service Worker caches all resources
-- **Installable**: Can be installed on mobile devices
+- **Installable**: Can be installed on iPhone/iPad via Safari "Add to Home Screen"
 - **Responsive**: Works on all screen sizes
-- **Touch optimized**: Swipe navigation and pull-to-refresh
+- **Touch optimized**: Swipe navigation and pull-to-clear functionality
+- **Persistent storage**: Checklist state saved in localStorage
 
 #### Service Worker (sw.js)
 - **Cache strategy**: Cache-first with background refresh
 - **Cache expiration**: 7-day cache duration with automatic updates
 - **Offline fallback**: Graceful degradation when offline
+- **Current version**: v8 (update this when cache version changes)
 
 ## Development Notes
 
@@ -64,7 +73,16 @@ This project doesn't use any build tools or package managers. All code is vanill
 - Test swipe navigation between calculator pages
 
 ### Deployment
-The app is designed to be deployed to a web server with the path `/fuel-pwa/`. All asset paths are absolute and include this prefix.
+The app is deployed to GitHub Pages at: https://fastfalcon7.github.io/fuel-pwa/
+All asset paths are absolute and include the `/fuel-pwa/` prefix.
+
+**Deployment workflow:**
+1. Push changes to `main` branch
+2. GitHub Pages automatically deploys (1-2 minutes)
+3. Users may need to clear Safari cache to see updates
+
+**Branch strategy:**
+- `main` - production branch (only branch in use)
 
 ### Code Style
 - Uses Slovak language for console messages and some comments
@@ -80,13 +98,28 @@ The app is designed to be deployed to a web server with the path `/fuel-pwa/`. A
 - `convertToLiters/convertFromLiters` - Unit conversion utilities
 - `updateCalculations()` - Main calculation orchestrator
 
-### UI Functions (index.html:321-647)
-- Swipe gesture handling for page navigation
+### UI Functions
+- Swipe gesture handling for page navigation (left/right between 3 pages)
 - Form synchronization between calculator pages
-- Pull-to-refresh functionality
-- Clear button functionality
+- Pull-to-refresh functionality (clears forms)
+- Clear button functionality (bottom right, clears all inputs)
+- Checklist management with localStorage persistence
 
-### Service Worker Functions (sw.js:24-159)
+### Service Worker Functions
 - Cache validation with timestamp checking
 - Background refresh of cached resources
 - Message handling for cache updates
+
+## Important Notes
+
+### Input Fields
+All input fields use `type="text"` with `inputmode="decimal"` to ensure numeric keyboard appears on mobile devices (iPhone/iPad). This provides better user experience than `type="number"`.
+
+### Cache Management
+When making significant changes to the app:
+1. Increment cache version in `sw.js` (CACHE_NAME and DYNAMIC_CACHE)
+2. Update version number in CLAUDE.md under "Service Worker" section
+3. This forces cache refresh for all users
+
+### Pull-to-Refresh
+Pull-to-refresh gesture **clears the form** (same as Clear button). It does NOT refresh/update the app.
