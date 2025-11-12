@@ -1,5 +1,5 @@
-const CACHE_NAME = 'fuel-pwa-v9';
-const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v9';
+const CACHE_NAME = 'fuel-pwa-v10';
+const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v10';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 dní v milisekundách
 
 const CACHE_FILES = [
@@ -35,17 +35,40 @@ async function isCacheValid(cacheName) {
 
 // Inštalácia Service Workera
 self.addEventListener('install', (event) => {
+    console.log('🔧 SW Install začal pre:', CACHE_NAME);
     event.waitUntil(
-        Promise.all([
-            caches.open(CACHE_NAME).then(async (cache) => {
-                console.log('🔧 Vytváram novú cache:', CACHE_NAME);
-                console.log('📋 Cachujem súbory:', CACHE_FILES);
+        (async () => {
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                console.log('✅ Cache otvorená:', CACHE_NAME);
+
                 // Pridanie časovej známky do cache
                 await cache.put('cache-timestamp', new Response(Date.now().toString()));
-                return cache.addAll(CACHE_FILES);
-            }),
-            self.skipWaiting()
-        ])
+                console.log('✅ Timestamp uložený');
+
+                // Cachuj všetky súbory JEDEN PO DRUHOM (robustnejšie než addAll)
+                for (const file of CACHE_FILES) {
+                    try {
+                        const response = await fetch(file);
+                        if (response.ok) {
+                            await cache.put(file, response);
+                            console.log('✅ Cachovaný:', file);
+                        } else {
+                            console.error('❌ Zlyhalo cachovanie (bad response):', file, response.status);
+                        }
+                    } catch (error) {
+                        console.error('❌ Zlyhalo cachovanie:', file, error);
+                    }
+                }
+
+                console.log('🎉 Všetky súbory cachované');
+                await self.skipWaiting();
+                console.log('✅ SW skipWaiting dokončený');
+            } catch (error) {
+                console.error('❌ SW Install zlyhal:', error);
+                throw error;
+            }
+        })()
     );
 });
 
