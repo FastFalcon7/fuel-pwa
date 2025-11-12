@@ -62,8 +62,9 @@ The application is built as a **single-file architecture** with all code embedde
 - **Cache strategy**: Cache-first with background refresh
 - **Cache expiration**: 7-day cache duration with automatic updates
 - **Offline fallback**: Graceful degradation when offline
-- **Current cache version**: v9 (update this when cache version changes)
-- **Current app version**: v0.0 (displayed in UI)
+- **Robust caching**: Individual file caching with error handling (not addAll)
+- **Current cache version**: v10 (update this when cache version changes)
+- **Current app version**: v0.1 (displayed in UI)
 
 ## Development Notes
 
