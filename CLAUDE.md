@@ -59,12 +59,13 @@ The application is built as a **single-file architecture** with all code embedde
 - **Version tracking**: Version number visible in bottom left corner (v0.0, v0.1, etc.)
 
 #### Service Worker (sw.js)
-- **Cache strategy**: SIMPLE cache-first (cache → network → cache fallback)
+- **Cache strategy**: Cache-first with background refresh and timestamp validation
 - **Offline functionality**: Reliable - tested 20+ minutes offline
-- **CRITICAL**: NO navigator.onLine (doesn't exist in SW context!)
-- **CRITICAL**: NO console.log in fetch handler (causes memory issues)
-- **Current cache version**: v11 (update this when cache version changes)
-- **Current app version**: v0.2 (displayed in UI)
+- **Cache expiration**: 7-day duration with automatic validation
+- **Background refresh**: Updates cache in background when online (uses navigator.onLine)
+- **Message handler**: Responds to UPDATE_CACHE messages for force refresh
+- **Current cache version**: v12 (update this when cache version changes)
+- **Current app version**: v0.3 (displayed in UI)
 
 ## Development Notes
 
@@ -166,15 +167,22 @@ When making significant changes to the app:
 ### Pull-to-Refresh
 Pull-to-refresh gesture **clears the form and localStorage** (same as Clear button). It does NOT refresh/update the app.
 
-### Service Worker Critical Rules
-**NEVER use these in Service Worker context:**
-- ❌ `navigator.onLine` - does NOT exist in SW, causes crashes
-- ❌ Excessive `console.log` in fetch handler - fills memory, causes issues
-- ❌ Complex timestamp/cache validations - causes offline failures
-- ❌ Background refresh checks with `navigator.onLine`
+### Service Worker Implementation Details
 
-**ALWAYS use:**
-- ✅ Simple cache-first strategy: `caches.match()` → `fetch()` → `caches.match()` fallback
-- ✅ Minimal logging (only in install/activate)
-- ✅ Pure promises without async/await complexity
-- ✅ Test offline for 20+ minutes to verify
+**Current working approach (tested 20+ minutes offline):**
+- ✅ `navigator.onLine` CAN be used in SW context with `event.waitUntil()` for background updates
+- ✅ Cache-first with background refresh when cache hit
+- ✅ Timestamp validation (7-day expiration) via `cache-timestamp` entry
+- ✅ Message handler for UPDATE_CACHE force refresh
+- ✅ Minimal logging (only in install/activate, removed from fetch handler)
+- ✅ `cache.addAll()` with timestamp in install event
+- ✅ Fallback chain: cache → network → cache again
+
+**Critical implementation:**
+1. Always serve from cache FIRST if available
+2. Background refresh using `event.waitUntil()` (non-blocking)
+3. Update timestamp on every cache write
+4. Message handler for force updates when app comes back online
+5. Test offline for 20+ minutes to verify reliability
+
+**This code (v12) is the PROVEN WORKING version from production.**
