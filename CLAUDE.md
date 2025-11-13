@@ -178,3 +178,112 @@ Pull-to-refresh gesture **clears the form and localStorage** (same as Clear butt
 - ✅ Minimal logging (only in install/activate)
 - ✅ Pure promises without async/await complexity
 - ✅ Test offline for 20+ minutes to verify
+
+---
+
+## 🚫 Failed Attempts Log (Post v0.3)
+
+**DÔLEŽITÉ:** Táto sekcia dokumentuje pokusy o predĺženie offline času, ktoré ZLYHALI. Nevracať sa k týmto prístupom!
+
+### ❌ V0.4 - IndexedDB Backup v Install Event
+**Cieľ:** Multi-layer persistence (Cache API + IndexedDB backup)
+
+**Implementácia:**
+- IndexedDB backup kritických súborov v `install` event
+- Fetch súborov počas inštalácie SW
+- IDB ako fallback pri cache eviction
+
+**Výsledok:** ❌ ZLYHAL - fungoval len 5 minút (horšie ako v0.3!)
+
+**Prečo zlyhalo:**
+- `await fetch()` v install event spôsobil **SW activation timeout**
+- iOS Safari ukončuje "heavy" SW inštalácie
+- SW lifecycle narušený - nezaregistroval sa správne
+
+**Poučenie:**
+- ❌ **NIKDY** fetch v install event
+- ❌ Async operácie v install = timeout risk
+- ✅ Install musí byť rýchly - len `cache.addAll()`
+
+---
+
+### ❌ V0.5 - Lazy IndexedDB Backup
+**Cieľ:** Oprava v0.4 - lazy backup namiesto eager v install
+
+**Implementácia:**
+- Install: len `cache.addAll()` (rýchle)
+- IDB backup pri prvom cache hit (lazy)
+- Postupné naplnenie IDB počas používania
+
+**Výsledok:** ❌ ZLYHAL - stále nefungovalo offline
+
+**Prečo zlyhalo:**
+- Lazy backup sa možno nespustil včas
+- IDB prázdna pri offline teste
+- Komplexnosť pridala ďalšie fail pointy
+
+**Poučenie:**
+- ❌ IndexedDB nepomohlo pri iOS cache eviction
+- ❌ Lazy stratégia nefunguje pre kritické súbory
+- ✅ Jednoduchosť > komplexnosť
+
+---
+
+### ❌ V0.6-V0.7.2 - Debug Tools + Diagnostika
+**Cieľ:** Zistiť prečo offline nefunguje
+
+**Implementácia:**
+- v0.6: Auto IDB backup (30s timer) + debug panel
+- v0.7: Eruda mobile console
+- v0.8: SW Status checker
+- v0.9: Immediate SW status alerts
+- v0.7.1: SW registration debug alerts
+- v0.7.2: JS execution test alert
+
+**Výsledok:** ❌ KRITICKÉ ZISTENIE - **Service Worker sa VÔBEC NEZAREGISTROVAL**
+
+**Diagnostika:**
+- ✅ JavaScript sa spúšťa (v0.7.2 alert fungoval)
+- ❌ `window.onload` event možno failuje
+- ❌ SW registrácia ticho zlyhala
+- ❌ Eruda console prázdna = žiadne logy
+- ❌ Aplikácia sa načítava dlhšie (performance degradácia)
+
+**Prečo zlyhalo:**
+- Pridanie debug nástrojov pokazilo SW registráciu
+- Príliš veľa zmien naraz (IndexedDB + Eruda + alerty)
+- Možno JS error pred SW registráciou
+- Safari/iOS môže blokovať SW v určitých podmienkach
+
+**Poučenie:**
+- ❌ **Debugging tools môžu pokaziť produkčný kód**
+- ❌ Príliš veľa zmien naraz = neidentifikovateľné problémy
+- ❌ Eruda/alerts môžu spomaliť načítanie
+- ✅ **JEDNA zmena, jeden test, metodicky**
+- ✅ Ak funguje, neopravuj (v0.3 fungovalo!)
+
+---
+
+### 📊 Záver Failed Attempts
+
+**Čo nefunguje pre iOS Safari offline:**
+1. ❌ IndexedDB backup (eager ani lazy)
+2. ❌ Fetch v install event
+3. ❌ Komplexné SW stratégie
+4. ❌ Debug nástroje v produkcii
+5. ❌ Viacero zmien naraz
+
+**Čo SA NAUČILO:**
+1. ✅ **V0.3 cache-first stratégia FUNGUJE (20 min)**
+2. ✅ Jednoduchosť je kľúčová
+3. ✅ iOS Safari má špecifické limity
+4. ✅ SW registrácia môže ticho zlyhať
+5. ✅ Jedna zmena, jeden test, methodicky
+
+**Ďalší krok:**
+- Zostať pri v0.3 (overené funkčné)
+- Riešiť LEN jedno: Ako predĺžiť 20 min?
+- Možnosti: Persistent Storage API, manifest tweaks, Service Worker optimalizácie
+- **BEZ** IndexedDB, **BEZ** debug tools, **BEZ** komplexity
+
+---
