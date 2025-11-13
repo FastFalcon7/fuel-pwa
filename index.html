@@ -239,6 +239,16 @@
             font-size: 11px;
             color: #999;
             z-index: 999;
+            cursor: pointer;
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+            user-select: none;
+        }
+
+        #versionInfo:hover {
+            color: #0066cc;
+            background: rgba(255, 255, 255, 1);
         }
 
         #statusBox {
@@ -296,12 +306,12 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo">v0.8</div>
+    <div id="versionInfo" onclick="document.getElementById('statusBox').classList.add('show')" title="Klikni pre zobrazenie PWA statusu">v0.8 📊</div>
 
     <!-- Status Box for PWA info -->
     <div id="statusBox">
         <h3>PWA Status</h3>
-        <div id="statusContent"></div>
+        <div id="statusContent">Loading...</div>
         <button onclick="document.getElementById('statusBox').classList.remove('show')">OK</button>
     </div>
 
@@ -928,19 +938,20 @@
                         statusHTML += '<p><span class="status-error">⚠️ Persistent Storage: NOT SUPPORTED</span></p>';
                     }
 
-                    // Zobraz status box
-                    document.getElementById('statusContent').innerHTML = statusHTML;
-                    document.getElementById('statusBox').classList.add('show');
+                    // Pridaj timestamp
+                    const now = new Date();
+                    const timestamp = now.toLocaleTimeString('sk-SK');
+                    statusHTML += `<p style="color: #999; font-size: 12px; margin-top: 15px;">Checked: ${timestamp}</p>`;
 
-                    // Auto-hide po 10 sekundách
-                    setTimeout(() => {
-                        document.getElementById('statusBox').classList.remove('show');
-                    }, 10000);
+                    // Ulož status (nezobrauj automaticky)
+                    document.getElementById('statusContent').innerHTML = statusHTML;
+                    console.log('✅ PWA Status ready - klikni na v0.8 📊 pre zobrazenie');
 
                 } catch (error) {
                     console.error('❌ Service Worker registrácia zlyhala:', error);
-                    document.getElementById('statusContent').innerHTML = '<p><span class="status-error">❌ Service Worker: FAILED</span></p><p>' + error.message + '</p>';
-                    document.getElementById('statusBox').classList.add('show');
+                    const errorHTML = '<p><span class="status-error">❌ Service Worker: FAILED</span></p><p>' + error.message + '</p>';
+                    document.getElementById('statusContent').innerHTML = errorHTML;
+                    // Nezobrauj automaticky, len ulož do statusContent
                 }
             });
         }
