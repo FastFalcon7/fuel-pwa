@@ -284,7 +284,7 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo">v0.8</div>
+    <div id="versionInfo">v0.9</div>
 
     <!-- Debug panel (triple-tap na version to show) -->
     <div id="debugPanel">
@@ -895,13 +895,38 @@
                     console.log('✅ Service Worker registrovaný:', registration.scope);
 
                     // Wait for SW to activate
+                    let swState = '';
                     if (registration.active) {
                         console.log('✅ SW už je active');
+                        swState = 'ACTIVE';
                     } else if (registration.installing) {
                         console.log('⏳ SW sa inštaluje...');
+                        swState = 'INSTALLING';
                     } else if (registration.waiting) {
                         console.log('⏸️ SW čaká na aktiváciu');
+                        swState = 'WAITING';
+                    } else {
+                        swState = 'UNKNOWN';
                     }
+
+                    // DEBUG ALERT - ukáž stav registrácie
+                    setTimeout(() => {
+                        const hasController = !!navigator.serviceWorker.controller;
+                        let msg = `✅ SW REGISTROVANÝ!\n\n`;
+                        msg += `Stav: ${swState}\n`;
+                        msg += `Controller: ${hasController ? 'ÁNO ✅' : 'NIE ❌'}\n`;
+                        msg += `Scope: ${registration.scope}\n\n`;
+
+                        if (!hasController) {
+                            msg += `⚠️ PROBLÉM: Controller chýba!\n`;
+                            msg += `SW nezachytáva fetch requesty.\n`;
+                            msg += `Skús reload stránky.`;
+                        } else {
+                            msg += `Offline MALO BY fungovať! 🎉`;
+                        }
+
+                        alert(msg);
+                    }, 500);
 
                     // Kontrola aktualizácií pri štarte
                     const checkForUpdates = async () => {
@@ -1083,7 +1108,7 @@
             // Local verification
             try {
                 const cacheNames = await caches.keys();
-                const cache = await caches.open('fuel-pwa-v16');
+                const cache = await caches.open('fuel-pwa-v17');
                 const cacheKeys = await cache.keys();
 
                 let msg = `📦 Cache API:\n`;

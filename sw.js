@@ -1,5 +1,5 @@
-const CACHE_NAME = 'fuel-pwa-v16';
-const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v16';
+const CACHE_NAME = 'fuel-pwa-v17';
+const DYNAMIC_CACHE = 'fuel-pwa-dynamic-v17';
 const IDB_NAME = 'fuel-pwa-idb';
 const IDB_VERSION = 1;
 const IDB_STORE = 'files';
