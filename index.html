@@ -284,11 +284,12 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo">v0.7</div>
+    <div id="versionInfo">v0.8</div>
 
     <!-- Debug panel (triple-tap na version to show) -->
     <div id="debugPanel">
         <button id="btnShowConsole">📱 Show Console</button>
+        <button id="btnSWStatus">🔍 SW Status</button>
         <button id="btnBackupIDB">📦 Backup to IDB</button>
         <button id="btnVerifyCache">🔍 Verify Cache</button>
         <button id="btnUpdateCache">🔄 Update Cache</button>
@@ -886,11 +887,21 @@
         // Registrácia Service Workera
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
+                console.log('🚀 Starting SW registration...');
                 try {
                     const registration = await navigator.serviceWorker.register('/fuel-pwa/sw.js', {
                         scope: '/fuel-pwa/'
                     });
-                    console.log('Service Worker registrovaný');
+                    console.log('✅ Service Worker registrovaný:', registration.scope);
+
+                    // Wait for SW to activate
+                    if (registration.active) {
+                        console.log('✅ SW už je active');
+                    } else if (registration.installing) {
+                        console.log('⏳ SW sa inštaluje...');
+                    } else if (registration.waiting) {
+                        console.log('⏸️ SW čaká na aktiváciu');
+                    }
 
                     // Kontrola aktualizácií pri štarte
                     const checkForUpdates = async () => {
@@ -915,13 +926,24 @@
                                 type: 'BACKUP_TO_IDB'
                             });
                             console.log('🔄 Automatický IDB backup spustený');
+                        } else {
+                            console.warn('⚠️ SW controller nie je dostupný pre IDB backup');
                         }
                     }, 30000); // 30 sekúnd
 
                 } catch (error) {
-                    console.error('Service Worker registrácia zlyhala:', error);
+                    console.error('❌ Service Worker registrácia zlyhala:', error);
+                    console.error('Error details:', error.message, error.stack);
+                    // Alert pre debugging
+                    setTimeout(() => {
+                        alert(`❌ SW registrácia zlyhala!\n\nError: ${error.message}\n\nSkús "SW Status" v debug paneli.`);
+                    }, 1000);
                 }
             });
+        } else {
+            console.error('❌ Service Worker API nie je podporovaná!');
+            alert('❌ Service Worker nie je podporovaný v tomto browseri!');
+        }
 
             // Vylepšené sledovanie životného cyklu aplikácie
             let lastUpdateCheck = Date.now();
@@ -984,6 +1006,61 @@
             document.body.appendChild(script);
         });
 
+        // SW Status checker
+        document.getElementById('btnSWStatus').addEventListener('click', async () => {
+            let msg = '🔍 Service Worker Status:\n\n';
+
+            // Check if SW supported
+            if (!('serviceWorker' in navigator)) {
+                alert('❌ Service Worker NIE JE podporovaný v tomto browseri!');
+                return;
+            }
+
+            msg += '✅ SW API podporovaná\n\n';
+
+            try {
+                // Check registration
+                const registration = await navigator.serviceWorker.getRegistration('/fuel-pwa/');
+
+                if (!registration) {
+                    msg += '❌ SW NIE JE registrovaný!\n';
+                    msg += 'Scope: /fuel-pwa/\n';
+                    alert(msg);
+                    return;
+                }
+
+                msg += '✅ SW JE registrovaný\n';
+                msg += `Scope: ${registration.scope}\n\n`;
+
+                // Check states
+                if (registration.installing) {
+                    msg += '⏳ Installing: áno\n';
+                }
+                if (registration.waiting) {
+                    msg += '⏸️ Waiting: áno\n';
+                }
+                if (registration.active) {
+                    msg += '✅ Active: áno\n';
+                    msg += `State: ${registration.active.state}\n`;
+                } else {
+                    msg += '❌ Active: NIE\n';
+                }
+
+                // Check controller
+                if (navigator.serviceWorker.controller) {
+                    msg += '\n✅ Controller: aktívny\n';
+                    msg += `URL: ${navigator.serviceWorker.controller.scriptURL}\n`;
+                } else {
+                    msg += '\n❌ Controller: ŽIADNY\n';
+                    msg += 'SW nezachytáva fetch requesty!\n';
+                }
+
+                alert(msg);
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        });
+
         document.getElementById('btnBackupIDB').addEventListener('click', () => {
             if (navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({ type: 'BACKUP_TO_IDB' });
@@ -1006,7 +1083,7 @@
             // Local verification
             try {
                 const cacheNames = await caches.keys();
-                const cache = await caches.open('fuel-pwa-v14');
+                const cache = await caches.open('fuel-pwa-v16');
                 const cacheKeys = await cache.keys();
 
                 let msg = `📦 Cache API:\n`;
