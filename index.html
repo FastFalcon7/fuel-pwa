@@ -239,62 +239,13 @@
             font-size: 11px;
             color: #999;
             z-index: 999;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        #debugPanel {
-            position: fixed;
-            bottom: 50px;
-            left: 20px;
-            background: white;
-            border: 2px solid #0066cc;
-            border-radius: 8px;
-            padding: 10px;
-            display: none;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-
-        #debugPanel.visible {
-            display: block;
-        }
-
-        #debugPanel button {
-            display: block;
-            width: 100%;
-            margin: 5px 0;
-            padding: 8px;
-            background: #0066cc;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        #debugPanel button:active {
-            background: #0052a3;
-        }
-
-        #debugPanel .close {
-            background: #999;
         }
     </style>
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo">v0.7</div>
-
-    <!-- Debug panel (triple-tap na version to show) -->
-    <div id="debugPanel">
-        <button id="btnShowConsole">📱 Show Console</button>
-        <button id="btnBackupIDB">📦 Backup to IDB</button>
-        <button id="btnVerifyCache">🔍 Verify Cache</button>
-        <button id="btnUpdateCache">🔄 Update Cache</button>
-        <button class="close" id="btnCloseDebug">Close</button>
-    </div>
-
+    <div id="versionInfo">v0.3</div>
+    
     <div class="container" id="container">
         <!-- Prvá stránka - pôvodný calculator -->
         <div class="page" id="page1">
@@ -908,16 +859,6 @@
                     // Kontrola pri obnovení pripojenia
                     window.addEventListener('online', checkForUpdates);
 
-                    // Automatický IDB backup po 30 sekundách (pre lazy IndexedDB naplnenie)
-                    setTimeout(() => {
-                        if (navigator.serviceWorker.controller) {
-                            navigator.serviceWorker.controller.postMessage({
-                                type: 'BACKUP_TO_IDB'
-                            });
-                            console.log('🔄 Automatický IDB backup spustený');
-                        }
-                    }, 30000); // 30 sekúnd
-
                 } catch (error) {
                     console.error('Service Worker registrácia zlyhala:', error);
                 }
@@ -940,114 +881,6 @@
                 }
             });
         }
-
-        // Debug panel - triple-tap na version info
-        let tapCount = 0;
-        let tapTimer = null;
-        const versionInfo = document.getElementById('versionInfo');
-        const debugPanel = document.getElementById('debugPanel');
-
-        versionInfo.addEventListener('click', () => {
-            tapCount++;
-            clearTimeout(tapTimer);
-
-            if (tapCount === 3) {
-                debugPanel.classList.toggle('visible');
-                tapCount = 0;
-            } else {
-                tapTimer = setTimeout(() => {
-                    tapCount = 0;
-                }, 500);
-            }
-        });
-
-        // Debug panel buttons
-
-        // Eruda console
-        document.getElementById('btnShowConsole').addEventListener('click', () => {
-            if (window.eruda) {
-                eruda.show();
-                return;
-            }
-
-            // Load Eruda dynamically
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/eruda';
-            script.onload = () => {
-                eruda.init();
-                eruda.show();
-                alert('✅ Console načítaná! Vidíš floating button?');
-            };
-            script.onerror = () => {
-                alert('❌ Eruda sa nepodarilo načítať. Si online?');
-            };
-            document.body.appendChild(script);
-        });
-
-        document.getElementById('btnBackupIDB').addEventListener('click', () => {
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'BACKUP_TO_IDB' });
-                console.log('📦 Triggering IDB backup...');
-                alert('✅ IDB backup spustený! Čakaj 2s...');
-            } else {
-                alert('❌ Service Worker nie je aktívny!');
-            }
-        });
-
-        document.getElementById('btnVerifyCache').addEventListener('click', async () => {
-            if (!navigator.serviceWorker.controller) {
-                alert('❌ Service Worker nie je aktívny!');
-                return;
-            }
-
-            // Trigger SW verification
-            navigator.serviceWorker.controller.postMessage({ type: 'VERIFY_CACHE' });
-
-            // Local verification
-            try {
-                const cacheNames = await caches.keys();
-                const cache = await caches.open('fuel-pwa-v14');
-                const cacheKeys = await cache.keys();
-
-                let msg = `📦 Cache API:\n`;
-                msg += `- Cache names: ${cacheNames.length}\n`;
-                msg += `- Cache items: ${cacheKeys.length}\n\n`;
-
-                // IDB check
-                const idbCheck = indexedDB.open('fuel-pwa-idb', 1);
-                idbCheck.onsuccess = (e) => {
-                    const db = e.target.result;
-                    const tx = db.transaction(['files'], 'readonly');
-                    const store = tx.objectStore('files');
-                    const count = store.count();
-                    count.onsuccess = () => {
-                        msg += `💾 IndexedDB:\n- Backup files: ${count.result}`;
-                        alert(msg);
-                    };
-                };
-                idbCheck.onerror = () => {
-                    msg += `💾 IndexedDB:\n- ERROR: Nedostupná`;
-                    alert(msg);
-                };
-            } catch (error) {
-                alert(`❌ Error: ${error.message}`);
-            }
-        });
-
-        document.getElementById('btnUpdateCache').addEventListener('click', () => {
-            if (navigator.serviceWorker.controller && navigator.onLine) {
-                navigator.serviceWorker.controller.postMessage({ type: 'UPDATE_CACHE' });
-                alert('✅ Cache update spustený!');
-            } else if (!navigator.onLine) {
-                alert('❌ Si offline - nemožno aktualizovať cache.');
-            } else {
-                alert('❌ Service Worker nie je aktívny!');
-            }
-        });
-
-        document.getElementById('btnCloseDebug').addEventListener('click', () => {
-            debugPanel.classList.remove('visible');
-        });
     };
     </script>
 </body>

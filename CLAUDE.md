@@ -57,22 +57,14 @@ The application is built as a **single-file architecture** with all code embedde
 - **Touch optimized**: Swipe navigation and pull-to-clear functionality
 - **Persistent storage**: All form values and checklist state saved in localStorage
 - **Version tracking**: Version number visible in bottom left corner (v0.0, v0.1, etc.)
-- **Debug panel**: Triple-tap on version info to show debug tools (IDB backup, cache verification)
-- **Auto IDB backup**: Automatically backs up critical files to IndexedDB 30s after page load
 
 #### Service Worker (sw.js)
-- **Cache strategy**: Cache-first with lazy IndexedDB backup fallback
-- **Offline functionality**: Multi-layer persistence (Cache API → IndexedDB → Network)
-- **IndexedDB backup**: LAZY - Critical files backed up on first cache hit (idempotent)
-- **iOS Safari resilience**: IndexedDB more resistant to cache eviction than Cache API
-- **Install event**: SIMPLE - only cache.addAll() for fast activation
-- **Background refresh**: Updates both Cache API and IndexedDB when online
-- **Message handlers**:
-  - UPDATE_CACHE: Force refresh of cache and IDB from network
-  - BACKUP_TO_IDB: Manually trigger cache→IDB backup
-  - VERIFY_CACHE: Diagnostic - verify cache and IDB contents
-- **Current cache version**: v15 (update this when cache version changes)
-- **Current app version**: v0.7 (displayed in UI)
+- **Cache strategy**: SIMPLE cache-first (cache → network → cache fallback)
+- **Offline functionality**: Reliable - tested 20+ minutes offline
+- **CRITICAL**: NO navigator.onLine (doesn't exist in SW context!)
+- **CRITICAL**: NO console.log in fetch handler (causes memory issues)
+- **Current cache version**: v11 (update this when cache version changes)
+- **Current app version**: v0.2 (displayed in UI)
 
 ## Development Notes
 
@@ -122,11 +114,9 @@ All asset paths are absolute and include the `/fuel-pwa/` prefix.
 - `saveFormState()` - Saves all form values to localStorage
 
 ### Service Worker Functions
-- **Multi-layer fetch**: Cache API → IndexedDB → Network
-- **IndexedDB helpers**: openIDB(), saveToIDB(), getFromIDB()
-- **Background refresh**: Updates both Cache API and IndexedDB
-- **Cache restoration**: Automatically restores Cache API from IndexedDB
-- **Message handling**: UPDATE_CACHE (refresh), VERIFY_CACHE (diagnostics)
+- Cache validation with timestamp checking
+- Background refresh of cached resources
+- Message handling for cache updates
 
 ## Important Notes
 
@@ -176,47 +166,15 @@ When making significant changes to the app:
 ### Pull-to-Refresh
 Pull-to-refresh gesture **clears the form and localStorage** (same as Clear button). It does NOT refresh/update the app.
 
-### Service Worker Implementation Details
+### Service Worker Critical Rules
+**NEVER use these in Service Worker context:**
+- ❌ `navigator.onLine` - does NOT exist in SW, causes crashes
+- ❌ Excessive `console.log` in fetch handler - fills memory, causes issues
+- ❌ Complex timestamp/cache validations - causes offline failures
+- ❌ Background refresh checks with `navigator.onLine`
 
-**Current approach (v13 - Lazy IndexedDB backup):**
-- ✅ Simple install: Only cache.addAll() for fast SW activation (NO fetch!)
-- ✅ Lazy IDB backup: Critical files backed up on first cache hit
-- ✅ Multi-layer fetch: Cache API → IndexedDB → Network
-- ✅ iOS Safari resilient: IDB more resistant to cache eviction
-- ✅ Self-healing: IDB automatically restores Cache API if evicted
-- ✅ Background refresh: Updates both Cache API and IndexedDB
-- ✅ Message handlers: UPDATE_CACHE, BACKUP_TO_IDB, VERIFY_CACHE
-
-**Why v0.4 failed (5 min timeout):**
-- ❌ Fetch in install event caused SW activation timeout
-- ❌ iOS Safari terminated SW before IDB backup completed
-- ❌ Complex install slowed down SW lifecycle
-
-**Critical fixes in v0.5:**
-1. **Install**: ONLY cache.addAll() - no fetch, no IDB
-2. **Lazy backup**: IDB filled gradually on cache hits (idempotent)
-3. **Fetch flow**: Cache hit → serve + lazy IDB backup (background)
-4. **Cache miss**: Check IDB → restore cache → serve
-5. **Network fallback**: Fetch → cache + IDB backup
-
-**Why lazy backup is better:**
-- Fast SW install/activate (like v0.3)
-- IDB populated naturally during app usage
-- No timeout risk in install event
-- Idempotent - safe to repeat
-
-**Testing requirement:**
-- Test offline for 1+ hours to verify iOS cache eviction handling
-- Monitor console for "Serving from IndexedDB (cache was evicted)" messages
-- Use debug panel (triple-tap version info) for manual testing
-
-**Debug panel (v0.7+):**
-- **Access**: Triple-tap on version info (bottom left)
-- **Buttons**:
-  - 📱 Show Console - Load Eruda mobile console (see all logs on iPhone)
-  - 📦 Backup to IDB - Manually trigger IDB backup from cache
-  - 🔍 Verify Cache - Check Cache API and IDB contents (shows alert with counts)
-  - 🔄 Update Cache - Force refresh from network (online only)
-- **Auto backup**: IDB backup runs automatically 30s after page load
-- **Eruda console**: Full mobile debugging without Mac - console logs, network, storage, DOM
-- **Alert feedback**: Verify Cache now shows counts directly in alert (no console needed)
+**ALWAYS use:**
+- ✅ Simple cache-first strategy: `caches.match()` → `fetch()` → `caches.match()` fallback
+- ✅ Minimal logging (only in install/activate)
+- ✅ Pure promises without async/await complexity
+- ✅ Test offline for 20+ minutes to verify
