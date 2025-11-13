@@ -57,6 +57,8 @@ The application is built as a **single-file architecture** with all code embedde
 - **Touch optimized**: Swipe navigation and pull-to-clear functionality
 - **Persistent storage**: All form values and checklist state saved in localStorage
 - **Version tracking**: Version number visible in bottom left corner (v0.0, v0.1, etc.)
+- **Debug panel**: Triple-tap on version info to show debug tools (IDB backup, cache verification)
+- **Auto IDB backup**: Automatically backs up critical files to IndexedDB 30s after page load
 
 #### Service Worker (sw.js)
 - **Cache strategy**: Cache-first with lazy IndexedDB backup fallback
@@ -69,8 +71,8 @@ The application is built as a **single-file architecture** with all code embedde
   - UPDATE_CACHE: Force refresh of cache and IDB from network
   - BACKUP_TO_IDB: Manually trigger cache→IDB backup
   - VERIFY_CACHE: Diagnostic - verify cache and IDB contents
-- **Current cache version**: v13 (update this when cache version changes)
-- **Current app version**: v0.5 (displayed in UI)
+- **Current cache version**: v14 (update this when cache version changes)
+- **Current app version**: v0.6 (displayed in UI)
 
 ## Development Notes
 
@@ -206,4 +208,13 @@ Pull-to-refresh gesture **clears the form and localStorage** (same as Clear butt
 **Testing requirement:**
 - Test offline for 1+ hours to verify iOS cache eviction handling
 - Monitor console for "Serving from IndexedDB (cache was evicted)" messages
-- Use VERIFY_CACHE message to check IDB status
+- Use debug panel (triple-tap version info) for manual testing
+
+**Debug panel (v0.6+):**
+- **Access**: Triple-tap on version info (bottom left)
+- **Buttons**:
+  - 📦 Backup to IDB - Manually trigger IDB backup from cache
+  - 🔍 Verify Cache - Check Cache API and IDB contents (see console)
+  - 🔄 Update Cache - Force refresh from network (online only)
+- **Auto backup**: IDB backup runs automatically 30s after page load
+- **Without Mac/PC**: Debug panel allows manual testing without Safari console access
