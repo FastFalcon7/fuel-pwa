@@ -71,8 +71,8 @@ The application is built as a **single-file architecture** with all code embedde
   - UPDATE_CACHE: Force refresh of cache and IDB from network
   - BACKUP_TO_IDB: Manually trigger cache→IDB backup
   - VERIFY_CACHE: Diagnostic - verify cache and IDB contents
-- **Current cache version**: v15 (update this when cache version changes)
-- **Current app version**: v0.7 (displayed in UI)
+- **Current cache version**: v17 (update this when cache version changes)
+- **Current app version**: v0.9 (displayed in UI)
 
 ## Development Notes
 
