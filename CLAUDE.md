@@ -71,8 +71,8 @@ The application is built as a **single-file architecture** with all code embedde
   - UPDATE_CACHE: Force refresh of cache and IDB from network
   - BACKUP_TO_IDB: Manually trigger cache→IDB backup
   - VERIFY_CACHE: Diagnostic - verify cache and IDB contents
-- **Current cache version**: v14 (update this when cache version changes)
-- **Current app version**: v0.6 (displayed in UI)
+- **Current cache version**: v15 (update this when cache version changes)
+- **Current app version**: v0.7 (displayed in UI)
 
 ## Development Notes
 
@@ -210,11 +210,13 @@ Pull-to-refresh gesture **clears the form and localStorage** (same as Clear butt
 - Monitor console for "Serving from IndexedDB (cache was evicted)" messages
 - Use debug panel (triple-tap version info) for manual testing
 
-**Debug panel (v0.6+):**
+**Debug panel (v0.7+):**
 - **Access**: Triple-tap on version info (bottom left)
 - **Buttons**:
+  - 📱 Show Console - Load Eruda mobile console (see all logs on iPhone)
   - 📦 Backup to IDB - Manually trigger IDB backup from cache
-  - 🔍 Verify Cache - Check Cache API and IDB contents (see console)
+  - 🔍 Verify Cache - Check Cache API and IDB contents (shows alert with counts)
   - 🔄 Update Cache - Force refresh from network (online only)
 - **Auto backup**: IDB backup runs automatically 30s after page load
-- **Without Mac/PC**: Debug panel allows manual testing without Safari console access
+- **Eruda console**: Full mobile debugging without Mac - console logs, network, storage, DOM
+- **Alert feedback**: Verify Cache now shows counts directly in alert (no console needed)

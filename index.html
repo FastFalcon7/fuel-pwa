@@ -284,10 +284,11 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo">v0.6</div>
+    <div id="versionInfo">v0.7</div>
 
     <!-- Debug panel (triple-tap na version to show) -->
     <div id="debugPanel">
+        <button id="btnShowConsole">📱 Show Console</button>
         <button id="btnBackupIDB">📦 Backup to IDB</button>
         <button id="btnVerifyCache">🔍 Verify Cache</button>
         <button id="btnUpdateCache">🔄 Update Cache</button>
@@ -961,17 +962,75 @@
         });
 
         // Debug panel buttons
+
+        // Eruda console
+        document.getElementById('btnShowConsole').addEventListener('click', () => {
+            if (window.eruda) {
+                eruda.show();
+                return;
+            }
+
+            // Load Eruda dynamically
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/eruda';
+            script.onload = () => {
+                eruda.init();
+                eruda.show();
+                alert('✅ Console načítaná! Vidíš floating button?');
+            };
+            script.onerror = () => {
+                alert('❌ Eruda sa nepodarilo načítať. Si online?');
+            };
+            document.body.appendChild(script);
+        });
+
         document.getElementById('btnBackupIDB').addEventListener('click', () => {
             if (navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({ type: 'BACKUP_TO_IDB' });
-                alert('✅ IDB backup spustený! Skontroluj konzolu.');
+                console.log('📦 Triggering IDB backup...');
+                alert('✅ IDB backup spustený! Čakaj 2s...');
+            } else {
+                alert('❌ Service Worker nie je aktívny!');
             }
         });
 
-        document.getElementById('btnVerifyCache').addEventListener('click', () => {
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'VERIFY_CACHE' });
-                alert('✅ Cache verification spustená! Skontroluj konzolu.');
+        document.getElementById('btnVerifyCache').addEventListener('click', async () => {
+            if (!navigator.serviceWorker.controller) {
+                alert('❌ Service Worker nie je aktívny!');
+                return;
+            }
+
+            // Trigger SW verification
+            navigator.serviceWorker.controller.postMessage({ type: 'VERIFY_CACHE' });
+
+            // Local verification
+            try {
+                const cacheNames = await caches.keys();
+                const cache = await caches.open('fuel-pwa-v14');
+                const cacheKeys = await cache.keys();
+
+                let msg = `📦 Cache API:\n`;
+                msg += `- Cache names: ${cacheNames.length}\n`;
+                msg += `- Cache items: ${cacheKeys.length}\n\n`;
+
+                // IDB check
+                const idbCheck = indexedDB.open('fuel-pwa-idb', 1);
+                idbCheck.onsuccess = (e) => {
+                    const db = e.target.result;
+                    const tx = db.transaction(['files'], 'readonly');
+                    const store = tx.objectStore('files');
+                    const count = store.count();
+                    count.onsuccess = () => {
+                        msg += `💾 IndexedDB:\n- Backup files: ${count.result}`;
+                        alert(msg);
+                    };
+                };
+                idbCheck.onerror = () => {
+                    msg += `💾 IndexedDB:\n- ERROR: Nedostupná`;
+                    alert(msg);
+                };
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
             }
         });
 
@@ -981,6 +1040,8 @@
                 alert('✅ Cache update spustený!');
             } else if (!navigator.onLine) {
                 alert('❌ Si offline - nemožno aktualizovať cache.');
+            } else {
+                alert('❌ Service Worker nie je aktívny!');
             }
         });
 
