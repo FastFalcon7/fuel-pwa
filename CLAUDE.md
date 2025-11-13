@@ -59,16 +59,18 @@ The application is built as a **single-file architecture** with all code embedde
 - **Version tracking**: Version number visible in bottom left corner (v0.0, v0.1, etc.)
 
 #### Service Worker (sw.js)
-- **Cache strategy**: Multi-layer persistence (Cache API → IndexedDB → Network)
-- **Offline functionality**: Enhanced with IndexedDB backup for critical files
-- **IndexedDB backup**: Critical files (index.html, manifest.json) backed up to IndexedDB
-- **iOS Safari resilience**: IndexedDB is more resistant to cache eviction than Cache API
+- **Cache strategy**: Cache-first with lazy IndexedDB backup fallback
+- **Offline functionality**: Multi-layer persistence (Cache API → IndexedDB → Network)
+- **IndexedDB backup**: LAZY - Critical files backed up on first cache hit (idempotent)
+- **iOS Safari resilience**: IndexedDB more resistant to cache eviction than Cache API
+- **Install event**: SIMPLE - only cache.addAll() for fast activation
 - **Background refresh**: Updates both Cache API and IndexedDB when online
 - **Message handlers**:
-  - UPDATE_CACHE: Force refresh of cache and IDB backups
-  - VERIFY_CACHE: Verify contents of Cache API and IndexedDB
+  - UPDATE_CACHE: Force refresh of cache and IDB from network
+  - BACKUP_TO_IDB: Manually trigger cache→IDB backup
+  - VERIFY_CACHE: Diagnostic - verify cache and IDB contents
 - **Current cache version**: v13 (update this when cache version changes)
-- **Current app version**: v0.4 (displayed in UI)
+- **Current app version**: v0.5 (displayed in UI)
 
 ## Development Notes
 
@@ -174,29 +176,34 @@ Pull-to-refresh gesture **clears the form and localStorage** (same as Clear butt
 
 ### Service Worker Implementation Details
 
-**Current approach (v13 - Enhanced with IndexedDB):**
-- ✅ Multi-layer persistence: Cache API → IndexedDB → Network
-- ✅ IndexedDB backup for critical files (index.html, manifest.json)
+**Current approach (v13 - Lazy IndexedDB backup):**
+- ✅ Simple install: Only cache.addAll() for fast SW activation (NO fetch!)
+- ✅ Lazy IDB backup: Critical files backed up on first cache hit
+- ✅ Multi-layer fetch: Cache API → IndexedDB → Network
 - ✅ iOS Safari resilient: IDB more resistant to cache eviction
-- ✅ Cache restoration: IDB automatically restores Cache API if evicted
-- ✅ Background refresh updates both Cache API and IndexedDB
-- ✅ Message handlers: UPDATE_CACHE, VERIFY_CACHE
-- ✅ No timestamp validation (not needed for offline-first)
+- ✅ Self-healing: IDB automatically restores Cache API if evicted
+- ✅ Background refresh: Updates both Cache API and IndexedDB
+- ✅ Message handlers: UPDATE_CACHE, BACKUP_TO_IDB, VERIFY_CACHE
 
-**Critical implementation:**
-1. **Cache API first** (fastest) → serve immediately
-2. **IndexedDB fallback** (iOS resilient) → if cache evicted
-3. **Network fallback** → if both offline stores empty
-4. **Automatic cache restoration** → IDB restores Cache API when serving
-5. **Background refresh** → updates both stores when online
-6. **Critical file backup** → only index.html and manifest.json in IDB (saves storage)
+**Why v0.4 failed (5 min timeout):**
+- ❌ Fetch in install event caused SW activation timeout
+- ❌ iOS Safari terminated SW before IDB backup completed
+- ❌ Complex install slowed down SW lifecycle
 
-**Why IndexedDB solves the problem:**
-- iOS Safari aggressively evicts Cache API after ~20-30 minutes
-- IndexedDB has better persistence characteristics on iOS
-- When Cache API is evicted, IDB serves the file AND restores the cache
-- This creates a self-healing cache system
+**Critical fixes in v0.5:**
+1. **Install**: ONLY cache.addAll() - no fetch, no IDB
+2. **Lazy backup**: IDB filled gradually on cache hits (idempotent)
+3. **Fetch flow**: Cache hit → serve + lazy IDB backup (background)
+4. **Cache miss**: Check IDB → restore cache → serve
+5. **Network fallback**: Fetch → cache + IDB backup
+
+**Why lazy backup is better:**
+- Fast SW install/activate (like v0.3)
+- IDB populated naturally during app usage
+- No timeout risk in install event
+- Idempotent - safe to repeat
 
 **Testing requirement:**
 - Test offline for 1+ hours to verify iOS cache eviction handling
-- Monitor console for "Serving from IndexedDB" messages
+- Monitor console for "Serving from IndexedDB (cache was evicted)" messages
+- Use VERIFY_CACHE message to check IDB status

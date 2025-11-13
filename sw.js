@@ -102,34 +102,16 @@ async function getFromIDB(url) {
     }
 }
 
-// Inštalácia Service Workera s IndexedDB backup
+// Inštalácia Service Workera - JEDNODUCHO (ako v0.3, ale s IDB support)
 self.addEventListener('install', (event) => {
     console.log('🔧 Installing Service Worker:', CACHE_NAME);
 
     event.waitUntil(
         Promise.all([
-            // 1. Cachuj všetky súbory do Cache API
             caches.open(CACHE_NAME).then((cache) => {
                 console.log('📋 Caching files to Cache API');
                 return cache.addAll(CACHE_FILES);
             }),
-
-            // 2. Backup kritických súborov do IndexedDB (odolnejšie)
-            (async () => {
-                console.log('💾 Backing up critical files to IndexedDB');
-                for (const url of CRITICAL_FILES) {
-                    try {
-                        const response = await fetch(url);
-                        if (response.ok) {
-                            await saveToIDB(url, response.clone());
-                            console.log('✅ Backed up to IDB:', url);
-                        }
-                    } catch (error) {
-                        console.error('❌ IDB backup failed for:', url, error);
-                    }
-                }
-            })(),
-
             self.skipWaiting()
         ])
     );
@@ -155,7 +137,7 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Zachytávanie požiadaviek - Multi-layer fallback (Cache → IndexedDB → Network)
+// Zachytávanie požiadaviek - Cache First s Lazy IDB backup
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         (async () => {
@@ -164,6 +146,15 @@ self.addEventListener('fetch', (event) => {
             // 1. Najprv skús Cache API (najrýchlejšie)
             const cachedResponse = await caches.match(event.request);
             if (cachedResponse) {
+                // LAZY BACKUP: Postupne naplň IDB pri cache hits (idempotentné)
+                if (CRITICAL_FILES.includes(url.pathname)) {
+                    event.waitUntil(
+                        saveToIDB(url.pathname, cachedResponse.clone()).catch(() => {
+                            // IDB backup failed - nevadí, máme cache
+                        })
+                    );
+                }
+
                 // Background refresh ak je online
                 if (navigator.onLine) {
                     event.waitUntil(
@@ -174,7 +165,7 @@ self.addEventListener('fetch', (event) => {
                                     const cache = await caches.open(CACHE_NAME);
                                     await cache.put(event.request, networkResponse.clone());
 
-                                    // Backup kritických súborov do IDB
+                                    // Update IDB backup
                                     if (CRITICAL_FILES.includes(url.pathname)) {
                                         await saveToIDB(url.pathname, networkResponse.clone());
                                     }
@@ -185,16 +176,17 @@ self.addEventListener('fetch', (event) => {
                         })()
                     );
                 }
+
                 return cachedResponse;
             }
 
-            // 2. Cache miss - skús IndexedDB (odolnejšie)
+            // 2. Cache miss - skús IndexedDB fallback (pre iOS cache eviction)
             if (CRITICAL_FILES.includes(url.pathname)) {
                 const idbResponse = await getFromIDB(url.pathname);
                 if (idbResponse) {
-                    console.log('✅ Serving from IndexedDB:', url.pathname);
+                    console.log('✅ Serving from IndexedDB (cache was evicted):', url.pathname);
 
-                    // Refresh cache z IDB (restore cache)
+                    // Restore cache z IDB
                     event.waitUntil(
                         caches.open(CACHE_NAME).then(cache =>
                             cache.put(event.request, idbResponse.clone())
@@ -223,7 +215,7 @@ self.addEventListener('fetch', (event) => {
 
                 return networkResponse;
             } catch (error) {
-                // 4. Final fallback - skús cache znovu
+                // 4. Final fallback - skús cache znovu (možno sa objavil)
                 const fallbackCache = await caches.match(event.request);
                 if (fallbackCache) {
                     return fallbackCache;
@@ -238,8 +230,9 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Spracovanie správ - s IndexedDB refresh
+// Spracovanie správ
 self.addEventListener('message', (event) => {
+    // Force refresh cache a IDB z network
     if (event.data && event.data.type === 'UPDATE_CACHE') {
         if (!navigator.onLine) {
             console.log('Offline - cache update preskočený');
@@ -271,7 +264,29 @@ self.addEventListener('message', (event) => {
         );
     }
 
-    // Nová správa pre verifikáciu cache
+    // Backup cache do IDB (lazy initialization)
+    if (event.data && event.data.type === 'BACKUP_TO_IDB') {
+        event.waitUntil(
+            (async () => {
+                console.log('💾 Backing up cache to IndexedDB');
+                const cache = await caches.open(CACHE_NAME);
+
+                for (const url of CRITICAL_FILES) {
+                    try {
+                        const cachedResponse = await cache.match(url);
+                        if (cachedResponse) {
+                            await saveToIDB(url, cachedResponse);
+                            console.log('✅ Backed up to IDB:', url);
+                        }
+                    } catch (error) {
+                        console.error('❌ IDB backup failed for:', url, error);
+                    }
+                }
+            })()
+        );
+    }
+
+    // Diagnostika - verifikuj cache a IDB
     if (event.data && event.data.type === 'VERIFY_CACHE') {
         event.waitUntil(
             (async () => {
