@@ -61,10 +61,12 @@ The application is built as a **single-file architecture** with all code embedde
 #### Service Worker (sw.js)
 - **Cache strategy**: SIMPLE cache-first (cache → network → cache fallback)
 - **Offline functionality**: Reliable - tested 20+ minutes offline
+- **Persistent Storage**: Uses `navigator.storage.persist()` to request persistent cache (iOS 15.2+)
 - **CRITICAL**: NO navigator.onLine (doesn't exist in SW context!)
 - **CRITICAL**: NO console.log in fetch handler (causes memory issues)
-- **Current cache version**: v11 (update this when cache version changes)
-- **Current app version**: v0.2 (displayed in UI)
+- **CRITICAL**: NO complex timestamp validations or background refresh checks
+- **Current cache version**: v13 (update this when cache version changes)
+- **Current app version**: v0.8 (displayed in UI)
 
 ## Development Notes
 
@@ -285,5 +287,55 @@ Pull-to-refresh gesture **clears the form and localStorage** (same as Clear butt
 - Riešiť LEN jedno: Ako predĺžiť 20 min?
 - Možnosti: Persistent Storage API, manifest tweaks, Service Worker optimalizácie
 - **BEZ** IndexedDB, **BEZ** debug tools, **BEZ** komplexity
+
+---
+
+## ✅ V0.8 - Persistent Storage API + Clean SW
+
+**Dátum:** 2025-11-13
+
+**Cieľ:** Predĺžiť offline čas nad 20 minút pomocou Persistent Storage API
+
+**Implementácia:**
+
+1. **Oprava kritických bugov v sw.js:**
+   - ❌ Odstránené `navigator.onLine` checks (riadky 80, 134) - toto NEEXISTUJE v SW!
+   - ❌ Odstránené komplexné timestamp validácie
+   - ❌ Odstránený message handler (UPDATE_CACHE)
+   - ✅ Vrátené k SIMPLE cache-first stratégii (v0.3 clean version)
+
+2. **Pridaná Persistent Storage API:**
+   - `navigator.storage.persist()` request po SW registrácii
+   - iOS 15.2+ podporuje persistent storage
+   - Zabráni iOS Safari aby vymazal cache pri low memory
+   - Logging storage quota/usage pre debugging
+
+3. **Zjednodušenia:**
+   - Odstránený visibilitychange handler
+   - Žiadne background refresh checks
+   - Žiadne timestamp tracking
+   - Žiadne online/offline detekcie
+
+**Zmeny v súboroch:**
+- `sw.js`: Zjednodušený na 73 riadkov (z 160)
+- `index.html`: Pridaný Persistent Storage request, verzia v0.8
+- `manifest.json`: Bez zmien (už optimalizovaný)
+- `CLAUDE.md`: Aktualizovaná dokumentácia
+
+**Očakávaný výsledok:**
+- Persistent Storage API požiada iOS Safari o ochranu cache
+- Cache by mala vydržať dlhšie ako 20 minút
+- Simple SW stratégia = menej fail points
+
+**Test plán:**
+1. Deploy na GitHub Pages
+2. Nainštalovať na iPhone ako PWA
+3. Otvoriť Safari Web Inspector → Console
+4. Skontrolovať: "📦 Persistent Storage: GRANTED ✅"
+5. Vypnúť WiFi/mobilné dáta
+6. Testovať offline po dobu 30-60 minút
+7. Overiť že aplikácia funguje celú dobu
+
+**Status:** 🔄 Čaká na testovanie
 
 ---
