@@ -284,7 +284,7 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo">v0.7</div>
+    <div id="versionInfo">v0.7.1</div>
 
     <!-- Debug panel (triple-tap na version to show) -->
     <div id="debugPanel">
@@ -886,11 +886,14 @@
         // Registrácia Service Workera
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
+                alert('🚀 Spúšťam SW registráciu...');
                 try {
                     const registration = await navigator.serviceWorker.register('/fuel-pwa/sw.js', {
                         scope: '/fuel-pwa/'
                     });
                     console.log('Service Worker registrovaný');
+
+                    alert('✅ SW registrovaný!\nScope: ' + registration.scope);
 
                     // Kontrola aktualizácií pri štarte
                     const checkForUpdates = async () => {
@@ -920,10 +923,15 @@
 
                 } catch (error) {
                     console.error('Service Worker registrácia zlyhala:', error);
+                    alert('❌ SW registrácia ZLYHALA!\n\nError: ' + error.message + '\n\nStack: ' + error.stack);
                 }
             });
+        } else {
+            alert('❌ Service Worker API nie je podporovaná v tomto browseri!');
+        }
 
-            // Vylepšené sledovanie životného cyklu aplikácie
+        // Vylepšené sledovanie životného cyklu aplikácie
+        if ('serviceWorker' in navigator) {
             let lastUpdateCheck = Date.now();
 
             document.addEventListener('visibilitychange', () => {
