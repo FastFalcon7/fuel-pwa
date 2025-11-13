@@ -244,7 +244,7 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo">v0.3</div>
+    <div id="versionInfo">v0.8</div>
     
     <div class="container" id="container">
         <!-- Prvá stránka - pôvodný calculator -->
@@ -841,43 +841,26 @@
                     const registration = await navigator.serviceWorker.register('/fuel-pwa/sw.js', {
                         scope: '/fuel-pwa/'
                     });
-                    console.log('Service Worker registrovaný');
+                    console.log('✅ Service Worker registrovaný');
 
-                    // Kontrola aktualizácií pri štarte
-                    const checkForUpdates = async () => {
-                        try {
-                            await registration.update();
-                            console.log('Service Worker aktualizovaný');
-                        } catch (error) {
-                            console.error('Chyba pri aktualizácii Service Workera:', error);
+                    // 🔐 REQUEST PERSISTENT STORAGE - kľúčové pre iOS Safari!
+                    if (navigator.storage && navigator.storage.persist) {
+                        const isPersisted = await navigator.storage.persist();
+                        console.log(`📦 Persistent Storage: ${isPersisted ? 'GRANTED ✅' : 'DENIED ❌'}`);
+
+                        // Zobraz info o storage
+                        if (navigator.storage.estimate) {
+                            const estimate = await navigator.storage.estimate();
+                            const usedMB = (estimate.usage / (1024 * 1024)).toFixed(2);
+                            const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(2);
+                            console.log(`💾 Storage: ${usedMB}MB / ${quotaMB}MB`);
                         }
-                    };
-
-                    // Kontrola aktualizácií každých 6 hodín (menej agresívne)
-                    setInterval(checkForUpdates, 1000 * 60 * 60 * 6);
-
-                    // Kontrola pri obnovení pripojenia
-                    window.addEventListener('online', checkForUpdates);
+                    } else {
+                        console.log('⚠️ Persistent Storage API nie je podporované');
+                    }
 
                 } catch (error) {
-                    console.error('Service Worker registrácia zlyhala:', error);
-                }
-            });
-
-            // Vylepšené sledovanie životného cyklu aplikácie
-            let lastUpdateCheck = Date.now();
-
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') {
-                    const timeSinceLastUpdate = Date.now() - lastUpdateCheck;
-                    if (timeSinceLastUpdate > 1000 * 60 * 60 * 6) { // 6 hodín
-                        if (navigator.serviceWorker.controller && navigator.onLine) {
-                            navigator.serviceWorker.controller.postMessage({
-                                type: 'UPDATE_CACHE'
-                            });
-                            lastUpdateCheck = Date.now();
-                        }
-                    }
+                    console.error('❌ Service Worker registrácia zlyhala:', error);
                 }
             });
         }
