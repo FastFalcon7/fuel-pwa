@@ -306,12 +306,12 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo" onclick="document.getElementById('statusBox').classList.add('show')" title="Klikni pre zobrazenie PWA statusu">v0.8 📊</div>
+    <div id="versionInfo" onclick="checkPWAStatus()" title="Klikni pre zobrazenie PWA statusu">v0.8 📊</div>
 
     <!-- Status Box for PWA info -->
     <div id="statusBox">
         <h3>PWA Status</h3>
-        <div id="statusContent">Loading...</div>
+        <div id="statusContent">Click on version to check status</div>
         <button onclick="document.getElementById('statusBox').classList.remove('show')">OK</button>
     </div>
 
@@ -903,56 +903,79 @@
         elements.fuelDensity.value = '0.7900';
         updateCalculations();
 
-        // Registrácia Service Workera
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
-                try {
-                    const registration = await navigator.serviceWorker.register('/fuel-pwa/sw.js', {
-                        scope: '/fuel-pwa/'
-                    });
-                    console.log('✅ Service Worker registrovaný');
+        // Funkcia pre kontrolu PWA statusu - spustí sa na klik
+        window.checkPWAStatus = async function() {
+            const statusContent = document.getElementById('statusContent');
+            const statusBox = document.getElementById('statusBox');
 
-                    let statusHTML = '<p><span class="status-ok">✅ Service Worker: OK</span></p>';
+            try {
+                statusContent.innerHTML = '<p>⏳ Checking...</p>';
+                statusBox.classList.add('show');
 
-                    // 🔐 REQUEST PERSISTENT STORAGE - kľúčové pre iOS Safari!
-                    if (navigator.storage && navigator.storage.persist) {
-                        const isPersisted = await navigator.storage.persist();
-                        console.log(`📦 Persistent Storage: ${isPersisted ? 'GRANTED ✅' : 'DENIED ❌'}`);
+                let statusHTML = '';
 
-                        if (isPersisted) {
-                            statusHTML += '<p><span class="status-ok">✅ Persistent Storage: GRANTED</span></p>';
-                        } else {
-                            statusHTML += '<p><span class="status-error">❌ Persistent Storage: DENIED</span></p>';
-                        }
-
-                        // Zobraz info o storage
-                        if (navigator.storage.estimate) {
-                            const estimate = await navigator.storage.estimate();
-                            const usedMB = (estimate.usage / (1024 * 1024)).toFixed(2);
-                            const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(2);
-                            console.log(`💾 Storage: ${usedMB}MB / ${quotaMB}MB`);
-                            statusHTML += `<p>💾 Storage: ${usedMB} MB / ${quotaMB} MB</p>`;
-                        }
+                // Check Service Worker
+                if ('serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.getRegistration('/fuel-pwa/');
+                    if (registration) {
+                        statusHTML += '<p><span class="status-ok">✅ Service Worker: REGISTERED</span></p>';
                     } else {
-                        console.log('⚠️ Persistent Storage API nie je podporované');
-                        statusHTML += '<p><span class="status-error">⚠️ Persistent Storage: NOT SUPPORTED</span></p>';
+                        statusHTML += '<p><span class="status-error">❌ Service Worker: NOT REGISTERED</span></p>';
+                    }
+                } else {
+                    statusHTML += '<p><span class="status-error">❌ Service Worker: NOT SUPPORTED</span></p>';
+                }
+
+                // Check Persistent Storage
+                if (navigator.storage && navigator.storage.persist) {
+                    const isPersisted = await navigator.storage.persist();
+
+                    if (isPersisted) {
+                        statusHTML += '<p><span class="status-ok">✅ Persistent Storage: GRANTED</span></p>';
+                    } else {
+                        statusHTML += '<p><span class="status-error">❌ Persistent Storage: DENIED</span></p>';
                     }
 
-                    // Pridaj timestamp
-                    const now = new Date();
-                    const timestamp = now.toLocaleTimeString('sk-SK');
-                    statusHTML += `<p style="color: #999; font-size: 12px; margin-top: 15px;">Checked: ${timestamp}</p>`;
-
-                    // Ulož status (nezobrauj automaticky)
-                    document.getElementById('statusContent').innerHTML = statusHTML;
-                    console.log('✅ PWA Status ready - klikni na v0.8 📊 pre zobrazenie');
-
-                } catch (error) {
-                    console.error('❌ Service Worker registrácia zlyhala:', error);
-                    const errorHTML = '<p><span class="status-error">❌ Service Worker: FAILED</span></p><p>' + error.message + '</p>';
-                    document.getElementById('statusContent').innerHTML = errorHTML;
-                    // Nezobrauj automaticky, len ulož do statusContent
+                    // Storage info
+                    if (navigator.storage.estimate) {
+                        const estimate = await navigator.storage.estimate();
+                        const usedMB = (estimate.usage / (1024 * 1024)).toFixed(2);
+                        const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(2);
+                        statusHTML += `<p>💾 Storage: ${usedMB} MB / ${quotaMB} MB</p>`;
+                    }
+                } else {
+                    statusHTML += '<p><span class="status-error">⚠️ Persistent Storage: NOT SUPPORTED</span></p>';
                 }
+
+                // Timestamp
+                const now = new Date();
+                const timestamp = now.toLocaleTimeString('sk-SK');
+                statusHTML += `<p style="color: #999; font-size: 12px; margin-top: 15px;">Checked: ${timestamp}</p>`;
+
+                statusContent.innerHTML = statusHTML;
+
+            } catch (error) {
+                statusContent.innerHTML = '<p><span class="status-error">❌ Error: ' + error.message + '</span></p>';
+            }
+        };
+
+        // Registrácia Service Workera
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/fuel-pwa/sw.js', {
+                scope: '/fuel-pwa/'
+            })
+            .then(registration => {
+                console.log('✅ Service Worker registrovaný');
+
+                // Request Persistent Storage
+                if (navigator.storage && navigator.storage.persist) {
+                    navigator.storage.persist().then(isPersisted => {
+                        console.log(`📦 Persistent Storage: ${isPersisted ? 'GRANTED ✅' : 'DENIED ❌'}`);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('❌ Service Worker registrácia zlyhala:', error);
             });
         }
     };
