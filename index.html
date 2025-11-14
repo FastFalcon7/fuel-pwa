@@ -306,7 +306,7 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo" onclick="checkPWAStatus()" title="Klikni pre zobrazenie PWA statusu">v0.8 📊</div>
+    <div id="versionInfo" onclick="checkPWAStatus()" title="Klikni pre zobrazenie PWA statusu">v0.81 📊</div>
 
     <!-- Status Box for PWA info -->
     <div id="statusBox">
@@ -840,6 +840,7 @@
                 });
                 // Trigger calculations after loading
                 updateCalculations();
+                calculate90Percent();  // Prepočítaj aj 90% calculator
             }
         }
 
