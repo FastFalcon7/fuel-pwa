@@ -60,12 +60,12 @@ The application is built as a **single-file architecture** with all code embedde
 
 #### Service Worker (sw.js)
 - **Cache strategy**: SIMPLE cache-first (cache → network → cache fallback)
-- **Offline functionality**: Reliable - tested 20+ minutes offline
+- **Offline functionality**: ✅ **PRODUCTION VERIFIED** - tested 12+ hours on iPad, 3+ hours on iPhone
 - **Persistent Storage**: Uses `navigator.storage.persist()` to request persistent cache (iOS 15.2+)
 - **CRITICAL**: NO navigator.onLine (doesn't exist in SW context!)
 - **CRITICAL**: NO console.log in fetch handler (causes memory issues)
 - **CRITICAL**: NO complex timestamp validations or background refresh checks
-- **Current cache version**: v13 (update this when cache version changes)
+- **Current cache version**: v15 (update this when cache version changes)
 - **Current app version**: v0.8 (displayed in UI)
 
 ## Development Notes
@@ -330,12 +330,19 @@ Pull-to-refresh gesture **clears the form and localStorage** (same as Clear butt
 **Test plán:**
 1. Deploy na GitHub Pages
 2. Nainštalovať na iPhone ako PWA
-3. Otvoriť Safari Web Inspector → Console
-4. Skontrolovať: "📦 Persistent Storage: GRANTED ✅"
+3. Kliknúť na `v0.8 📊` pre zobrazenie statusu
+4. Skontrolovať: "✅ Persistent Storage: GRANTED"
 5. Vypnúť WiFi/mobilné dáta
-6. Testovať offline po dobu 30-60 minút
-7. Overiť že aplikácia funguje celú dobu
+6. Zatvoriť PWA a znovu otvoriť po 30-60 minútach offline
+7. Overiť že aplikácia funguje
 
-**Status:** 🔄 Čaká na testovanie
+**Test výsledky:** ✅ **ÚSPECH!**
+- **iPad:** 12+ hodín offline - aplikácia fungovala perfektne! 🎉
+- **iPhone:** 3+ hodiny offline - aplikácia fungovala! 🎉
+- **Zlepšenie:** Z 10-20 minút na niekoľko hodín (60x-18x lepšie!)
+- **Persistent Storage:** GRANTED na oboch zariadeniach
+- **Záver:** Persistent Storage API vyriešilo problém s iOS cache eviction
+
+**Status:** ✅ **VYRIEŠENÉ - Produkčné**
 
 ---
