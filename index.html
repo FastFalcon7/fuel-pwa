@@ -337,7 +337,7 @@
                 <div class="form-group">
                     <label for="fuelDensity">Fuel Density:</label>
                     <div class="input-container">
-                        <input type="text" inputmode="decimal" id="fuelDensity" value="0.7900">
+                        <input type="text" inputmode="decimal" id="fuelDensity" value="0.790">
                         <span class="unit">kg/l</span>
                     </div>
                 </div>
@@ -596,7 +596,7 @@
             // Prvá stránka
             elements.remainingFuel.value = '';
             elements.requiredFuel.value = '';
-            elements.fuelDensity.value = '0.7900';
+            elements.fuelDensity.value = '0.790';
             elements.fuelTemperature.value = '15';
             elements.requiredUpliftLbs.value = '';
             elements.requiredUpliftConverted.value = '';
@@ -772,7 +772,7 @@
         elements.fuelTemperature.addEventListener('input', function() {
             const temperature = parseFloat(this.value);
             if (!isNaN(temperature)) {
-                elements.fuelDensity.value = calculateDensity(temperature).toFixed(4);
+                elements.fuelDensity.value = calculateDensity(temperature).toFixed(3);
             }
             if (elements.actualUplift.value) {
                 updateActualUpliftDisplay();
@@ -937,7 +937,7 @@
         elements.requiredUpliftLbs.value = '';
         elements.requiredUpliftConverted.value = '';
         elements.fuelTemperature.value = '15';
-        elements.fuelDensity.value = '0.7900';
+        elements.fuelDensity.value = '0.790';
         updateCalculations();
 
         // Funkcia pre kontrolu PWA statusu - spustí sa na klik
