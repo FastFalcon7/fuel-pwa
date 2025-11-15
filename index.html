@@ -306,13 +306,13 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo" onclick="checkPWAStatus()" title="Klikni pre zobrazenie PWA statusu">v0.81 📊</div>
+    <div id="versionInfo" title="Klikni pre zobrazenie PWA statusu">v0.82 📊</div>
 
     <!-- Status Box for PWA info -->
     <div id="statusBox">
         <h3>PWA Status</h3>
         <div id="statusContent">Click on version to check status</div>
-        <button onclick="document.getElementById('statusBox').classList.remove('show')">OK</button>
+        <button id="statusBoxCloseBtn">OK</button>
     </div>
 
     <div class="container" id="container">
@@ -787,15 +787,28 @@
 
         // Načítanie stavu checklistu z localStorage
         function loadChecklistState() {
-            const savedState = localStorage.getItem(CHECKLIST_STORAGE_KEY);
-            if (savedState) {
+            try {
+                const savedState = localStorage.getItem(CHECKLIST_STORAGE_KEY);
+                if (!savedState) return;
+
                 const state = JSON.parse(savedState);
+
+                // Validate state structure
+                if (typeof state !== 'object' || state === null) {
+                    console.warn('Invalid checklist state, clearing...');
+                    localStorage.removeItem(CHECKLIST_STORAGE_KEY);
+                    return;
+                }
+
                 checklistItems.forEach(item => {
                     const itemKey = item.getAttribute('data-item');
-                    if (state[itemKey]) {
+                    if (itemKey && state[itemKey] === true) {
                         item.classList.add('checked');
                     }
                 });
+            } catch (error) {
+                console.error('Failed to load checklist state:', error);
+                localStorage.removeItem(CHECKLIST_STORAGE_KEY);
             }
         }
 
@@ -827,20 +840,43 @@
             'requiredUpliftLbs', 'actualUplift', 'remainingFuel90', 'tripTaxiFuel'
         ];
 
-        // Load saved form values
+        // Load saved form values with validation
         function loadFormState() {
-            const savedState = localStorage.getItem(FORM_STORAGE_KEY);
-            if (savedState) {
+            try {
+                const savedState = localStorage.getItem(FORM_STORAGE_KEY);
+                if (!savedState) return;
+
                 const state = JSON.parse(savedState);
+
+                // Validate that state is an object
+                if (typeof state !== 'object' || state === null) {
+                    console.warn('Invalid form state in localStorage, clearing...');
+                    localStorage.removeItem(FORM_STORAGE_KEY);
+                    return;
+                }
+
                 inputFields.forEach(fieldId => {
                     const element = document.getElementById(fieldId);
                     if (element && state[fieldId] !== undefined && state[fieldId] !== '') {
-                        element.value = state[fieldId];
+                        // Validate that value is a valid number string
+                        const value = String(state[fieldId]);
+
+                        // Allow negative, decimal, and positive numbers
+                        if (!/^-?\d*\.?\d+$/.test(value) && value !== '') {
+                            console.warn(`Invalid value for ${fieldId}, skipping`);
+                            return;
+                        }
+
+                        element.value = value;
                     }
                 });
+
                 // Trigger calculations after loading
                 updateCalculations();
-                calculate90Percent();  // Prepočítaj aj 90% calculator
+                calculate90Percent();
+            } catch (error) {
+                console.error('Failed to load form state:', error);
+                localStorage.removeItem(FORM_STORAGE_KEY);
             }
         }
 
@@ -956,9 +992,22 @@
                 statusContent.innerHTML = statusHTML;
 
             } catch (error) {
-                statusContent.innerHTML = '<p><span class="status-error">❌ Error: ' + error.message + '</span></p>';
+                // XSS Safe: Using textContent instead of innerHTML
+                const errorParagraph = document.createElement('p');
+                const errorSpan = document.createElement('span');
+                errorSpan.className = 'status-error';
+                errorSpan.textContent = '❌ Error: ' + error.message;
+                errorParagraph.appendChild(errorSpan);
+                statusContent.innerHTML = '';
+                statusContent.appendChild(errorParagraph);
             }
         };
+
+        // Attach event listeners (replace inline onclick)
+        document.getElementById('versionInfo').addEventListener('click', checkPWAStatus);
+        document.getElementById('statusBoxCloseBtn').addEventListener('click', function() {
+            document.getElementById('statusBox').classList.remove('show');
+        });
 
         // Registrácia Service Workera
         if ('serviceWorker' in navigator) {
