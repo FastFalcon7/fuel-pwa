@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fuel-pwa-v15';
+const CACHE_NAME = 'fuel-pwa-v16';
 
 const CACHE_FILES = [
     '/fuel-pwa/',
