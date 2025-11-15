@@ -15,10 +15,7 @@
     <link rel="apple-touch-icon" sizes="152x152" href="/fuel-pwa/assets/icon-152x152.png">
     <link rel="apple-touch-icon" sizes="167x167" href="/fuel-pwa/assets/icon-167x167.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/fuel-pwa/assets/icon-180x180.png">
-
-    <!-- Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'; worker-src 'self';">
-
+  
     <link rel="manifest" href="/fuel-pwa/manifest.json">
     
     <style>
@@ -309,13 +306,13 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo" title="Klikni pre zobrazenie PWA statusu">v0.82 📊</div>
+    <div id="versionInfo" onclick="checkPWAStatus()" title="Klikni pre zobrazenie PWA statusu">v0.81 📊</div>
 
     <!-- Status Box for PWA info -->
     <div id="statusBox">
         <h3>PWA Status</h3>
         <div id="statusContent">Click on version to check status</div>
-        <button id="statusBoxCloseBtn">OK</button>
+        <button onclick="document.getElementById('statusBox').classList.remove('show')">OK</button>
     </div>
 
     <div class="container" id="container">
@@ -478,34 +475,7 @@
     <button class="clear-button" id="clearButton">CLR</button>
 
     <script>
-    // Input validation helper function
-    function validateNumericInput(value, min = 0, max = 999999, defaultValue = 0) {
-        const parsed = parseFloat(value);
-
-        // Check if NaN
-        if (isNaN(parsed)) {
-            return defaultValue;
-        }
-
-        // Check if negative
-        if (parsed < min) {
-            return min;
-        }
-
-        // Check if too large
-        if (parsed > max) {
-            return max;
-        }
-
-        // Check for Infinity
-        if (!isFinite(parsed)) {
-            return defaultValue;
-        }
-
-        return parsed;
-    }
-
-    window.addEventListener('DOMContentLoaded', function() {
+    window.onload = function() {
         const elements = {
             // Prvá stránka
             remainingFuel: document.getElementById('remainingFuel'),
@@ -594,8 +564,8 @@
 
         // Funkcie pre 90% calculator
         function calculate90Percent() {
-            const remainingFuel90 = validateNumericInput(elements.remainingFuel90.value, 0, 999999, 0);
-            const tripTaxiFuel = validateNumericInput(elements.tripTaxiFuel.value, 0, 999999, 0);
+            const remainingFuel90 = parseFloat(elements.remainingFuel90.value) || 0;
+            const tripTaxiFuel = parseFloat(elements.tripTaxiFuel.value) || 0;
             
             // Required Fuel = Remaining Fuel + 90% of Trip+Taxi Fuel
             const requiredFuel90 = remainingFuel90 + (tripTaxiFuel * 0.9);
@@ -676,7 +646,7 @@
         function convertToLiters(value, fromUnit) {
             if (fromUnit === 'USG') return value * 3.78541;
             if (fromUnit === 'LBS') {
-                const density = validateNumericInput(elements.fuelDensity.value, 0.5, 1.0, 0.79);
+                const density = parseFloat(elements.fuelDensity.value) || 0.79;
                 return value / (density * 2.20462);
             }
             return value;
@@ -685,7 +655,7 @@
         function convertFromLiters(liters, toUnit) {
             if (toUnit === 'USG') return liters / 3.78541;
             if (toUnit === 'LBS') {
-                const density = validateNumericInput(elements.fuelDensity.value, 0.5, 1.0, 0.79);
+                const density = parseFloat(elements.fuelDensity.value) || 0.79;
                 return liters * density * 2.20462;
             }
             return liters;
@@ -715,7 +685,7 @@
 
         function updateActualUpliftDisplay() {
             const currentUnit = getActualUpliftUnit();
-            const currentValue = validateNumericInput(elements.actualUplift.value, 0, 999999, 0);
+            const currentValue = parseFloat(elements.actualUplift.value) || 0;
             const currentValueInLbs = convertValue(currentValue, currentUnit, 'LBS');
             lastActualUpliftLbs = currentValueInLbs;
         }
@@ -727,10 +697,10 @@
         }
 
         function updateCalculations(sourceField) {
-            const density = validateNumericInput(elements.fuelDensity.value, 0.5, 1.0, 0.79);
-            const remainingFuelLbs = validateNumericInput(elements.remainingFuel.value, 0, 999999, 0);
-            const requiredFuelLbs = validateNumericInput(elements.requiredFuel.value, 0, 999999, 0);
-            let upliftLbs = validateNumericInput(elements.requiredUpliftLbs.value, 0, 999999, 0);
+            const density = parseFloat(elements.fuelDensity.value) || 0.79;
+            const remainingFuelLbs = parseFloat(elements.remainingFuel.value) || 0;
+            const requiredFuelLbs = parseFloat(elements.requiredFuel.value) || 0;
+            let upliftLbs = parseFloat(elements.requiredUpliftLbs.value) || 0;
 
             // Keď užívateľ edituje requiredFuel, prepočítaj iba uplift (NEPREPISUJ requiredFuel)
             if (sourceField === 'requiredFuel') {
@@ -788,8 +758,8 @@
         });
 
         elements.fuelDensity.addEventListener('input', function() {
-            const density = validateNumericInput(this.value, 0.5, 1.0, 0.79);
-            if (density !== 0.79) { // Only update if we have a valid custom value
+            const density = parseFloat(this.value);
+            if (!isNaN(density)) {
                 elements.fuelTemperature.value = Math.round(calculateTemperature(density));
             }
             if (elements.actualUplift.value) {
@@ -800,8 +770,8 @@
         });
 
         elements.fuelTemperature.addEventListener('input', function() {
-            const temperature = validateNumericInput(this.value, -50, 100, 15);
-            if (temperature !== 15) { // Only update if we have a valid custom value
+            const temperature = parseFloat(this.value);
+            if (!isNaN(temperature)) {
                 elements.fuelDensity.value = calculateDensity(temperature).toFixed(4);
             }
             if (elements.actualUplift.value) {
@@ -817,29 +787,15 @@
 
         // Načítanie stavu checklistu z localStorage
         function loadChecklistState() {
-            try {
-                const savedState = localStorage.getItem(CHECKLIST_STORAGE_KEY);
-                if (!savedState) return;
-
+            const savedState = localStorage.getItem(CHECKLIST_STORAGE_KEY);
+            if (savedState) {
                 const state = JSON.parse(savedState);
-
-                // Validate state structure
-                if (typeof state !== 'object' || state === null) {
-                    console.warn('Invalid checklist state, clearing...');
-                    localStorage.removeItem(CHECKLIST_STORAGE_KEY);
-                    return;
-                }
-
                 checklistItems.forEach(item => {
                     const itemKey = item.getAttribute('data-item');
-                    if (itemKey && state[itemKey] === true) {
+                    if (state[itemKey]) {
                         item.classList.add('checked');
                     }
                 });
-
-            } catch (error) {
-                console.error('Failed to load checklist state:', error);
-                localStorage.removeItem(CHECKLIST_STORAGE_KEY);
             }
         }
 
@@ -871,44 +827,20 @@
             'requiredUpliftLbs', 'actualUplift', 'remainingFuel90', 'tripTaxiFuel'
         ];
 
-        // Load saved form values with validation
+        // Load saved form values
         function loadFormState() {
-            try {
-                const savedState = localStorage.getItem(FORM_STORAGE_KEY);
-                if (!savedState) return;
-
+            const savedState = localStorage.getItem(FORM_STORAGE_KEY);
+            if (savedState) {
                 const state = JSON.parse(savedState);
-
-                // Validate that state is an object
-                if (typeof state !== 'object' || state === null) {
-                    console.warn('Invalid form state in localStorage, clearing...');
-                    localStorage.removeItem(FORM_STORAGE_KEY);
-                    return;
-                }
-
                 inputFields.forEach(fieldId => {
                     const element = document.getElementById(fieldId);
                     if (element && state[fieldId] !== undefined && state[fieldId] !== '') {
-                        // Validate that value is a valid number string
-                        const value = String(state[fieldId]);
-
-                        // Allow negative, decimal, and positive numbers
-                        if (!/^-?\d*\.?\d+$/.test(value) && value !== '') {
-                            console.warn(`Invalid value for ${fieldId}, skipping`);
-                            return;
-                        }
-
-                        element.value = value;
+                        element.value = state[fieldId];
                     }
                 });
-
                 // Trigger calculations after loading
                 updateCalculations();
-                calculate90Percent();
-
-            } catch (error) {
-                console.error('Failed to load form state:', error);
-                localStorage.removeItem(FORM_STORAGE_KEY);
+                calculate90Percent();  // Prepočítaj aj 90% calculator
             }
         }
 
@@ -972,8 +904,8 @@
         elements.fuelDensity.value = '0.7900';
         updateCalculations();
 
-        // Funkcia pre kontrolu PWA statusu
-        async function checkPWAStatus() {
+        // Funkcia pre kontrolu PWA statusu - spustí sa na klik
+        window.checkPWAStatus = async function() {
             const statusContent = document.getElementById('statusContent');
             const statusBox = document.getElementById('statusBox');
 
@@ -1024,24 +956,9 @@
                 statusContent.innerHTML = statusHTML;
 
             } catch (error) {
-                // XSS Safe: Using textContent instead of innerHTML
-                const errorParagraph = document.createElement('p');
-                const errorSpan = document.createElement('span');
-                errorSpan.className = 'status-error';
-                errorSpan.textContent = '❌ Error: ' + error.message;
-                errorParagraph.appendChild(errorSpan);
-                statusContent.innerHTML = ''; // Clear existing content
-                statusContent.appendChild(errorParagraph);
+                statusContent.innerHTML = '<p><span class="status-error">❌ Error: ' + error.message + '</span></p>';
             }
-        }
-
-        // Attach event listener to version info
-        document.getElementById('versionInfo').addEventListener('click', checkPWAStatus);
-
-        // Attach event listener to status box close button
-        document.getElementById('statusBoxCloseBtn').addEventListener('click', function() {
-            document.getElementById('statusBox').classList.remove('show');
-        });
+        };
 
         // Registrácia Service Workera
         if ('serviceWorker' in navigator) {
