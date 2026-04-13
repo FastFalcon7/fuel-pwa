@@ -306,7 +306,7 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo" title="Klikni pre zobrazenie PWA statusu">v0.82 📊</div>
+    <div id="versionInfo" title="Klikni pre zobrazenie PWA statusu">v0.83 📊</div>
 
     <!-- Status Box for PWA info -->
     <div id="statusBox">
@@ -338,7 +338,10 @@
                     <label for="fuelDensity">Fuel Density:</label>
                     <div class="input-container">
                         <input type="text" inputmode="decimal" id="fuelDensity" value="0.790">
-                        <span class="unit">kg/l</span>
+                        <select id="densityUnit">
+                            <option value="kgl">kg/l</option>
+                            <option value="lbusg">lb/USg</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-group">
@@ -481,6 +484,7 @@
             remainingFuel: document.getElementById('remainingFuel'),
             requiredFuel: document.getElementById('requiredFuel'),
             fuelDensity: document.getElementById('fuelDensity'),
+            densityUnit: document.getElementById('densityUnit'),
             fuelTemperature: document.getElementById('fuelTemperature'),
             requiredUpliftLbs: document.getElementById('requiredUpliftLbs'),
             requiredUpliftConverted: document.getElementById('requiredUpliftConverted'),
@@ -498,6 +502,16 @@
 
         let currentPage = 0;
         let lastActualUpliftLbs = 0;
+        const KG_L_TO_LB_USG = 8.3454; // 2.20462 × 3.78541
+
+        // Helper: get density in kg/l regardless of display unit
+        function getDensityKgL() {
+            const val = parseFloat(elements.fuelDensity.value) || 0.79;
+            if (elements.densityUnit.value === 'lbusg') {
+                return val / KG_L_TO_LB_USG;
+            }
+            return val;
+        }
 
         const container = document.getElementById('container');
         const dot1 = document.getElementById('dot1');
@@ -596,6 +610,7 @@
             // Prvá stránka
             elements.remainingFuel.value = '';
             elements.requiredFuel.value = '';
+            elements.densityUnit.value = 'kgl';
             elements.fuelDensity.value = '0.790';
             elements.fuelTemperature.value = '15';
             elements.requiredUpliftLbs.value = '';
@@ -616,6 +631,7 @@
             });
             localStorage.removeItem('parkingChecklistState');
             localStorage.removeItem('fuelCalculatorFormState');
+            localStorage.removeItem('fuelDensityUnit');
 
             lastActualUpliftLbs = 0;
             updateCalculations();
@@ -646,7 +662,7 @@
         function convertToLiters(value, fromUnit) {
             if (fromUnit === 'USG') return value * 3.78541;
             if (fromUnit === 'LBS') {
-                const density = parseFloat(elements.fuelDensity.value) || 0.79;
+                const density = getDensityKgL();
                 return value / (density * 2.20462);
             }
             return value;
@@ -655,7 +671,7 @@
         function convertFromLiters(liters, toUnit) {
             if (toUnit === 'USG') return liters / 3.78541;
             if (toUnit === 'LBS') {
-                const density = parseFloat(elements.fuelDensity.value) || 0.79;
+                const density = getDensityKgL();
                 return liters * density * 2.20462;
             }
             return liters;
@@ -697,7 +713,7 @@
         }
 
         function updateCalculations(sourceField) {
-            const density = parseFloat(elements.fuelDensity.value) || 0.79;
+            const density = getDensityKgL();
             const remainingFuelLbs = parseFloat(elements.remainingFuel.value) || 0;
             const requiredFuelLbs = parseFloat(elements.requiredFuel.value) || 0;
             let upliftLbs = parseFloat(elements.requiredUpliftLbs.value) || 0;
@@ -758,9 +774,9 @@
         });
 
         elements.fuelDensity.addEventListener('input', function() {
-            const density = parseFloat(this.value);
-            if (!isNaN(density)) {
-                elements.fuelTemperature.value = Math.round(calculateTemperature(density));
+            const densityKgL = getDensityKgL();
+            if (!isNaN(densityKgL)) {
+                elements.fuelTemperature.value = Math.round(calculateTemperature(densityKgL));
             }
             if (elements.actualUplift.value) {
                 updateActualUpliftDisplay();
@@ -772,12 +788,32 @@
         elements.fuelTemperature.addEventListener('input', function() {
             const temperature = parseFloat(this.value);
             if (!isNaN(temperature)) {
-                elements.fuelDensity.value = calculateDensity(temperature).toFixed(3);
+                const densityKgL = calculateDensity(temperature);
+                if (elements.densityUnit.value === 'lbusg') {
+                    elements.fuelDensity.value = (densityKgL * KG_L_TO_LB_USG).toFixed(2);
+                } else {
+                    elements.fuelDensity.value = densityKgL.toFixed(3);
+                }
             }
             if (elements.actualUplift.value) {
                 updateActualUpliftDisplay();
                 convertActualUpliftToNewUnit(getActualUpliftUnit());
             }
+            updateCalculations();
+        });
+
+        // Density unit change handler - convert displayed value
+        elements.densityUnit.addEventListener('change', function() {
+            const val = parseFloat(elements.fuelDensity.value);
+            if (isNaN(val)) return;
+            if (this.value === 'lbusg') {
+                // kg/l → lb/USg
+                elements.fuelDensity.value = (val * KG_L_TO_LB_USG).toFixed(2);
+            } else {
+                // lb/USg → kg/l
+                elements.fuelDensity.value = (val / KG_L_TO_LB_USG).toFixed(3);
+            }
+            localStorage.setItem('fuelDensityUnit', this.value);
             updateCalculations();
         });
 
@@ -855,6 +891,12 @@
                     return;
                 }
 
+                // Restore density unit preference
+                const savedDensityUnit = localStorage.getItem('fuelDensityUnit');
+                if (savedDensityUnit === 'kgl' || savedDensityUnit === 'lbusg') {
+                    elements.densityUnit.value = savedDensityUnit;
+                }
+
                 inputFields.forEach(fieldId => {
                     const element = document.getElementById(fieldId);
                     if (element && state[fieldId] !== undefined && state[fieldId] !== '') {
@@ -890,6 +932,7 @@
                 }
             });
             localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(state));
+            localStorage.setItem('fuelDensityUnit', elements.densityUnit.value);
         }
 
         // Add input listeners to save on change
@@ -900,8 +943,20 @@
             }
         });
 
-        // Load saved form state on page load
+        // Inicializácia - set defaults BEFORE loading saved state
+        elements.requiredUpliftLbs.value = '';
+        elements.requiredUpliftConverted.value = '';
+        elements.fuelTemperature.value = '15';
+        elements.fuelDensity.value = '0.790';
+
+        // Load saved form state on page load (overwrites defaults if saved values exist)
         loadFormState();
+
+        // Recalculate lastActualUpliftLbs from restored actualUplift value
+        if (elements.actualUplift.value) {
+            updateActualUpliftDisplay();
+            updateCalculations();
+        }
 
         // Event listeners pre clear button a pull-to-refresh
         document.getElementById('clearButton').addEventListener('click', clearForm);
@@ -933,13 +988,6 @@
             pullIndicator.style.transform = 'translateY(-100%)';
         }, { passive: true });
 
-        // Inicializácia
-        elements.requiredUpliftLbs.value = '';
-        elements.requiredUpliftConverted.value = '';
-        elements.fuelTemperature.value = '15';
-        elements.fuelDensity.value = '0.790';
-        updateCalculations();
-
         // Funkcia pre kontrolu PWA statusu - spustí sa na klik
         window.checkPWAStatus = async function() {
             const statusContent = document.getElementById('statusContent');
@@ -964,8 +1012,8 @@
                 }
 
                 // Check Persistent Storage
-                if (navigator.storage && navigator.storage.persist) {
-                    const isPersisted = await navigator.storage.persist();
+                if (navigator.storage && navigator.storage.persisted) {
+                    const isPersisted = await navigator.storage.persisted();
 
                     if (isPersisted) {
                         statusHTML += '<p><span class="status-ok">✅ Persistent Storage: GRANTED</span></p>';

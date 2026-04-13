@@ -65,8 +65,8 @@ The application is built as a **single-file architecture** with all code embedde
 - **CRITICAL**: NO navigator.onLine (doesn't exist in SW context!)
 - **CRITICAL**: NO console.log in fetch handler (causes memory issues)
 - **CRITICAL**: NO complex timestamp validations or background refresh checks
-- **Current cache version**: v16 (update this when cache version changes)
-- **Current app version**: v0.82 (displayed in UI)
+- **Current cache version**: v17 (update this when cache version changes)
+- **Current app version**: v0.83 (displayed in UI)
 
 ## Development Notes
 
@@ -151,7 +151,8 @@ All input fields use `type="text"` with `inputmode="decimal"` to ensure numeric 
 - All input field values are automatically saved to localStorage on every change
 - Values persist after closing/reopening the app
 - Saved fields: `remainingFuel`, `requiredFuel`, `fuelDensity`, `fuelTemperature`, `requiredUpliftLbs`, `actualUplift`, `remainingFuel90`, `tripTaxiFuel`
-- Clear button removes both form values and checklist state from localStorage
+- Density unit preference saved separately with key: `fuelDensityUnit`
+- Clear button removes both form values, checklist state, and density unit preference from localStorage
 - Uses storage key: `fuelCalculatorFormState`
 
 ### Checklist Persistence
