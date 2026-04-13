@@ -306,7 +306,7 @@
 </head>
 <body>
     <div class="pull-indicator">Pull to refresh</div>
-    <div id="versionInfo" title="Klikni pre zobrazenie PWA statusu">v0.85 📊</div>
+    <div id="versionInfo" title="Klikni pre zobrazenie PWA statusu">v0.86 📊</div>
 
     <!-- Status Box for PWA info -->
     <div id="statusBox">
@@ -774,6 +774,7 @@
             // Prepočítaj hodnotu v Actual Uplift na novú jednotku
             convertActualUpliftToNewUnit(selectedUnit);
             updateCalculations();
+            saveFormState();
         });
 
         elements.fuelDensity.addEventListener('input', function() {
@@ -821,8 +822,8 @@
             // Update Actual Uplift unit text and convert its value
             updateActualUpliftUnitText();
             convertActualUpliftToNewUnit(elements.upliftUnit.value);
-            localStorage.setItem('fuelDensityUnit', this.value);
             updateCalculations();
+            saveFormState();
         });
 
         // Parking checklist functionality

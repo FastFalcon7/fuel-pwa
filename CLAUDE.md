@@ -65,8 +65,8 @@ The application is built as a **single-file architecture** with all code embedde
 - **CRITICAL**: NO navigator.onLine (doesn't exist in SW context!)
 - **CRITICAL**: NO console.log in fetch handler (causes memory issues)
 - **CRITICAL**: NO complex timestamp validations or background refresh checks
-- **Current cache version**: v19 (update this when cache version changes)
-- **Current app version**: v0.85 (displayed in UI)
+- **Current cache version**: v20 (update this when cache version changes)
+- **Current app version**: v0.86 (displayed in UI)
 
 ## Development Notes
 
